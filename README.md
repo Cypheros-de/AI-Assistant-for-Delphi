@@ -1,6 +1,6 @@
 # CyAIAssistant — AI Coding Assistant for the Delphi IDE
 
-![Delphi](https://img.shields.io/badge/Delphi-11%2B-EE1F35?logo=delphi&logoColor=white)
+![Delphi](https://img.shields.io/badge/Delphi-10.4%2B-EE1F35?logo=delphi&logoColor=white)
 ![License](https://img.shields.io/badge/License-GPL--2.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows)
 
