@@ -146,11 +146,11 @@ CyAIAssistant follows the active Delphi IDE theme automatically. Full support fo
 ## Installation
 
 1. Clone or download this repository
-2. Install SSH-Pascal (see its README) so `Ssh2Client.pas` and `SftpClient.pas` are on the library path
-3. Open `CyAIAssistant.dpk` in Delphi
-4. Right-click the package in the Project Manager and choose **Install**
-5. The *Cypheros AI Assistant* menu entry appears under **Tools** in the IDE
-6. Open **Tools → Cypheros AI Assistant → Settings** and enter your API key(s)
+2. Open `CyAIAssistant.dpk` in Delphi
+3. Right-click the package in the Project Manager and choose **Install**
+4. The *Cypheros AI Assistant* menu entry appears under **Tools** in the IDE
+5. Open **Tools → Cypheros AI Assistant → Settings** and enter your API key(s)
+6. The libssh2.dll file required for SFTP sync is copied to the Bpl directory during installation. If you don't want this to happen, disable the post-build event
 
 ---
 
