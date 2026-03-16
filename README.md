@@ -172,7 +172,7 @@ CyAIAssistant follows the active Delphi IDE theme automatically. Full support fo
 +-------------------------+        SFTP         +-------------------------+
 |   Development Machine   | <-----------------> |          VM             |
 |                         |                     |                         |
-|  Delphi IDE             |   project files      |  Claude Code            |
+|  Delphi IDE             |   project files     |  Claude Code            |
 |  CyAIAssistant plugin   | <-- sync ---------> |  (isolated, no access   |
 |  Source code (master)   |                     |   to dev machine)       |
 +-------------------------+                     +-------------------------+
@@ -192,7 +192,7 @@ CyAIAssistant follows the active Delphi IDE theme automatically. Full support fo
 
 - Your code is sent to the AI provider you configure. Review the privacy policy of your chosen provider before use.
 - Using **Ollama** keeps all data local — nothing leaves your machine.
-- When using the SFTP sync + VM approach, your source code only travels to your own VM — it never leaves your infrastructure.
+- When using the SFTP sync + VM approach, your source code only travels to your own VM and back — Claude Code has no access to your infrastructure or other source code (if configured correctly).
 - API keys are stored in the Windows registry under `HKCU\Software\Cypheros\CyAIAssistant` and are never transmitted anywhere other than the configured API endpoint.
 
 ---
