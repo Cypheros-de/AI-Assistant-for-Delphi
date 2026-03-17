@@ -19,8 +19,9 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
+  Winapi.Windows, Winapi.Messages,
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  Vcl.Dialogs,
+  Vcl.Dialogs, Vcl.Graphics,
   CyAIAssistant.Settings,
   CyAIAssistant.AIClient;
 
@@ -63,7 +64,7 @@ type
       SplitterMain   : TSplitter;
       PanelHistory   : TPanel;
         LabelHistory : TLabel;
-        MemoHistory  : TMemo;
+        RichHistory  : TRichEdit;
     procedure ComboProviderChange(Sender: TObject);
     procedure BtnNewChatClick(Sender: TObject);
     procedure BtnSendClick(Sender: TObject);
@@ -96,8 +97,6 @@ implementation
 {$R *.dfm}
 
 uses
-  Winapi.Windows,
-  Winapi.Messages,
   Winapi.ShellAPI,
   System.IOUtils,
   System.RegularExpressions,
@@ -153,12 +152,134 @@ begin
   else          ProgressBar.Style := pbstNormal;
 end;
 
-procedure TChatDialog.AppendHistory(const ARole, AText: string);
+{ ---------------------------------------------------------------------------
+  FormatAIText
+  Converts the raw AI response text into something readable:
+  - Converts markdown pipe-table rows (| col | col |) into indented lines
+  - Replaces || separators with line breaks
+  - Strips leading/trailing ** bold markers (rendered via font style instead)
+  - Collapses sequences of 3+ blank lines to a single blank line
+  --------------------------------------------------------------------------- }
+function FormatAIText(const AText: string): string;
+var
+  Lines  : TStringList;
+  Out    : TStringList;
+  I      : Integer;
+  Line   : string;
+  Trimmed: string;
+  Parts  : TArray<string>;
+  Col    : string;
+  Row    : string;
+  Blanks : Integer;
 begin
-  MemoHistory.Lines.Add('[' + ARole + ']');
-  MemoHistory.Lines.Add(AText);
-  MemoHistory.Lines.Add('');
-  SendMessage(MemoHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+  Lines  := TStringList.Create;
+  Out    := TStringList.Create;
+  try
+    // First pass: split || into separate lines
+    var Expanded := AText.Replace(' || ', #13#10);
+    Lines.Text := Expanded;
+
+    Blanks := 0;
+    for I := 0 to Lines.Count - 1 do
+    begin
+      Line    := Lines[I];
+      Trimmed := Trim(Line);
+
+      // Markdown table separator rows (---|---) -- skip entirely
+      if (Trimmed <> '') and
+         (Trimmed.Replace('-','').Replace('|','').Replace('+','').Replace(' ','') = '') then
+        Continue;
+
+      // Markdown table rows: | col | col | col |
+      if (Length(Trimmed) > 1) and (Trimmed[1] = '|') then
+      begin
+        Parts := Trimmed.Trim(['|']).Split(['|']);
+        Row := '';
+        for Col in Parts do
+        begin
+          var C := Trim(Col);
+          if C <> '' then
+            Row := Row + '  ' + C;
+        end;
+        if Trim(Row) <> '' then
+        begin
+          Out.Add(Trim(Row));
+          Blanks := 0;
+        end;
+        Continue;
+      end;
+
+      // Blank line throttling
+      if Trimmed = '' then
+      begin
+        Inc(Blanks);
+        if Blanks <= 1 then Out.Add('');
+        Continue;
+      end;
+
+      Blanks := 0;
+      Out.Add(Line);
+    end;
+
+    Result := Out.Text;
+    // Trim a trailing blank line that TStringList.Text appends
+    while Result.EndsWith(#13#10#13#10) do
+      Result := Copy(Result, 1, Length(Result) - 2);
+
+  finally
+    Lines.Free;
+    Out.Free;
+  end;
+end;
+
+{ ---------------------------------------------------------------------------
+  RichAppend  --  append styled text to RichHistory without flicker
+  --------------------------------------------------------------------------- }
+procedure RichAppend(Rich: TRichEdit; const AText: string;
+  ABold: Boolean; AColor: TColor; AFontHeight: Integer = -12);
+begin
+  Rich.SelStart  := MaxInt;
+  Rich.SelLength := 0;
+  Rich.SelAttributes.Color  := AColor;
+  if ABold then
+    Rich.SelAttributes.Style := [fsBold]
+  else
+    Rich.SelAttributes.Style := [];
+  Rich.SelAttributes.Height := AFontHeight;
+  Rich.SelText := AText;
+end;
+
+procedure TChatDialog.AppendHistory(const ARole, AText: string);
+const
+  COLOR_YOU  = $00E8A020;  // amber -- [You] header
+  COLOR_AI   = $0040C080;  // teal -- [AI] header
+  COLOR_TEXT = clWindowText;
+var
+  HeaderColor: TColor;
+  Formatted  : string;
+begin
+  RichHistory.Lines.BeginUpdate;
+  try
+    // Header line
+    if SameText(ARole, 'You') then
+      HeaderColor := COLOR_YOU
+    else
+      HeaderColor := COLOR_AI;
+
+    RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -22);
+    RichAppend(RichHistory, #13#10, False, COLOR_TEXT);
+
+    // Body text -- preprocessed
+    Formatted := FormatAIText(AText);
+    RichAppend(RichHistory, Formatted, False, COLOR_TEXT, -20);
+    RichAppend(RichHistory, #13#10, False, COLOR_TEXT);
+
+  finally
+    RichHistory.Lines.EndUpdate;
+  end;
+
+  // Scroll to bottom
+  SendMessage(RichHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);
 end;
 
 { ---------------------------------------------------------------------------
@@ -240,7 +361,7 @@ begin
     Exit;
   FHistory.Clear;
   FDetectedFiles.Clear;
-  MemoHistory.Clear;
+  RichHistory.Clear;
   ListFiles.Clear;
   MemoFilePreview.Clear;
   TabFiles.TabVisible    := False;

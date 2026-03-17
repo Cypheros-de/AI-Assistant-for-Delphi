@@ -1,4 +1,4 @@
-﻿object ChatDialog: TChatDialog
+object ChatDialog: TChatDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - AI Chat'
@@ -10,9 +10,10 @@
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OldCreateOrder = True
   Position = poScreenCenter
-  TextHeight = 25
   PixelsPerInch = 96
+  TextHeight = 15
   object PanelTop: TPanel
     Left = 0
     Top = 0
@@ -29,13 +30,13 @@
     TabOrder = 0
     StyleElements = [seFont, seBorder]
     DesignSize = (
-      1377
-      66)
+      918
+      44)
     object LabelTitle: TLabel
       Left = 12
       Top = 6
       Width = 69
-      Height = 27
+      Height = 28
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -53,7 +54,7 @@
       Left = 160
       Top = 14
       Width = 47
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -70,7 +71,7 @@
       Left = 336
       Top = 14
       Width = 37
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -87,7 +88,7 @@
       Left = 225
       Top = 10
       Width = 100
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -106,7 +107,7 @@
       Left = 385
       Top = 10
       Width = 200
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -185,8 +186,8 @@
           object LabelInput: TLabel
             Left = 0
             Top = 0
-            Width = 455
-            Height = 17
+            Width = 452
+            Height = 15
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -200,13 +201,13 @@
             Font.Style = [fsBold]
             ParentFont = False
             Layout = tlCenter
-            ExplicitWidth = 87
+            ExplicitWidth = 85
           end
           object MemoInput: TMemo
             Left = 0
-            Top = 17
-            Width = 455
-            Height = 378
+            Top = 15
+            Width = 452
+            Height = 376
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -214,7 +215,7 @@
             Align = alClient
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindowText
-            Font.Height = -17
+            Font.Height = -13
             Font.Name = 'Segoe UI'
             Font.Style = []
             ParentFont = False
@@ -223,8 +224,8 @@
           end
           object PanelChatBtns: TPanel
             Left = 0
-            Top = 395
-            Width = 455
+            Top = 391
+            Width = 452
             Height = 48
             Margins.Left = 5
             Margins.Top = 5
@@ -318,7 +319,7 @@
             Left = 200
             Top = 0
             Width = 5
-            Height = 395
+            Height = 391
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -329,7 +330,7 @@
             Left = 0
             Top = 0
             Width = 200
-            Height = 395
+            Height = 391
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -340,8 +341,8 @@
             object LabelFiles: TLabel
               Left = 0
               Top = 0
-              Width = 200
-              Height = 17
+              Width = 86
+              Height = 15
               Margins.Left = 5
               Margins.Top = 5
               Margins.Right = 5
@@ -355,19 +356,18 @@
               Font.Style = [fsBold]
               ParentFont = False
               Layout = tlCenter
-              ExplicitWidth = 86
             end
             object ListFiles: TListBox
               Left = 0
-              Top = 17
+              Top = 15
               Width = 200
-              Height = 378
+              Height = 376
               Margins.Left = 5
               Margins.Top = 5
               Margins.Right = 5
               Margins.Bottom = 5
               Align = alClient
-              ItemHeight = 25
+              ItemHeight = 15
               TabOrder = 0
               OnClick = ListFilesClick
             end
@@ -375,8 +375,8 @@
           object MemoFilePreview: TMemo
             Left = 205
             Top = 0
-            Width = 249
-            Height = 395
+            Width = 247
+            Height = 391
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -395,8 +395,8 @@
           end
           object PanelFileBtns: TPanel
             Left = 0
-            Top = 395
-            Width = 455
+            Top = 391
+            Width = 452
             Height = 48
             Margins.Left = 5
             Margins.Top = 5
@@ -464,7 +464,7 @@
         Left = 0
         Top = 0
         Width = 453
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -478,27 +478,26 @@
         Font.Style = [fsBold]
         ParentFont = False
         Layout = tlCenter
-        ExplicitWidth = 81
+        ExplicitWidth = 79
       end
-      object MemoHistory: TMemo
+      object RichHistory: TRichEdit
         Left = 0
-        Top = 17
+        Top = 15
         Width = 453
-        Height = 453
-        Margins.Left = 5
-        Margins.Top = 5
-        Margins.Right = 5
-        Margins.Bottom = 5
+        Height = 454
         Align = alClient
-        Font.Charset = DEFAULT_CHARSET
+        Font.Charset = ANSI_CHARSET
         Font.Color = clWindowText
-        Font.Height = -15
-        Font.Name = 'Consolas'
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
         Font.Style = []
+        HideSelection = False
         ParentFont = False
         ReadOnly = True
-        ScrollBars = ssBoth
+        ScrollBars = ssVertical
         TabOrder = 0
+        WantReturns = False
+        Zoom = 100
       end
     end
   end
