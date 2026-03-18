@@ -718,7 +718,9 @@ end;
 procedure TSFtpClient.Receive(const RemoteFile, LocalFile: string; Overwrite:Boolean);
 Var
   FileStream: TFileStream;
-   Mode: Word;
+  Mode: Word;
+  Attribs: LIBSSH2_SFTP_ATTRIBUTES;
+  M: TMarshaller;
 begin
   if Overwrite then
     Mode := fmCreate or fmOpenWrite
@@ -730,6 +732,10 @@ begin
   finally
     FileStream.Free;
   end;
+  // Preserve the remote modification time on the local file to prevent sync ping-pong
+  if libssh2_sftp_stat(FSFtp, M.AsAnsi(ExpandTilde(RemoteFile), FSession.CodePage).ToPointer, Attribs) = 0 then
+    if TestBit(Attribs.Flags, LIBSSH2_SFTP_ATTR_ACMODTIME) then
+      TFile.SetLastWriteTime(LocalFile, TTimeZone.Local.ToLocalTime(UnixToDateTime(Attribs.MTime)));
 end;
 
 function TSFtpClient.RemoveDir(const Dir: string): Boolean;
@@ -803,6 +809,9 @@ procedure TSFtpClient.Send(const LocalFile, RemoteFile: string;
   Overwrite: Boolean; Permissions: TFilePermissions);
 Var
   FileStream: TFileStream;
+  Attribs: LIBSSH2_SFTP_ATTRIBUTES;
+  LocalUtcMTime: TDateTime;
+  M: TMarshaller;
 begin
   FileStream := TFileStream.Create(LocalFile, fmOpenRead);
   try
@@ -810,6 +819,13 @@ begin
   finally
     FileStream.Free;
   end;
+  // Preserve the local modification time on the remote file to prevent sync ping-pong
+  LocalUtcMTime := TTimeZone.Local.ToUniversalTime(TFile.GetLastWriteTime(LocalFile));
+  Attribs := Default(LIBSSH2_SFTP_ATTRIBUTES);
+  Attribs.Flags := LIBSSH2_SFTP_ATTR_ACMODTIME;
+  Attribs.ATime := DateTimeToUnix(LocalUtcMTime, True);
+  Attribs.MTime := DateTimeToUnix(LocalUtcMTime, True);
+  libssh2_sftp_setstat(FSFtp, M.AsAnsi(RealPath(RemoteFile), FSession.CodePage).ToPointer, Attribs);
 end;
 
 procedure TSFtpClient.SetBufferSize(Size: Int64);

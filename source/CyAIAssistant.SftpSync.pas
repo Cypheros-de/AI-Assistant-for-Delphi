@@ -343,8 +343,7 @@ begin
 
   Log('Sync started  ' + AHost + ':' + IntToStr(APort) + '  remote: ' + ARemoteBasePath + '  local: ' + ALocalBasePath);
 
-  // Run an immediate first cycle
-  SetEvent(FImmediateSync);
+  OnSyncTimer(nil);
 end;
 
 procedure TSftpSyncEngine.Stop;
@@ -710,7 +709,7 @@ begin
         Log('[UP] ' + TPath.GetFileName(LInfo.RelPath) + '  Reason: not on remote' + '  Local: ' + FmtDT(LInfo.MTime));
         Inc(Uploaded);
         FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-        FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(Now)); // UTC sentinel; server stores approx this time
+        FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
       except
         on E: Exception do
           Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
@@ -728,7 +727,7 @@ begin
         Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: not local' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
         Inc(Downloaded);
         FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
-        FLastSyncedMTime.AddOrSetValue('L:' + Key, Now); // local time sentinel; LInfo.MTime approx this
+        FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
         var
         NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
         TMainThreadRunner.Queue(
@@ -770,7 +769,7 @@ begin
               FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
             Inc(Uploaded);
             FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-            FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(Now)); // UTC sentinel; server stores approx this time
+            FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
           except
             on E: Exception do
               Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
@@ -786,7 +785,7 @@ begin
               '  Local: ' + FmtDT(LInfo.MTime));
             Inc(Downloaded);
             FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
-            FLastSyncedMTime.AddOrSetValue('L:' + Key, Now); // local time sentinel; LInfo.MTime approx this
+            FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
             var
             NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
             TMainThreadRunner.Queue(
@@ -820,7 +819,7 @@ begin
             FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
           Inc(Uploaded);
           FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-          FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(Now)); // UTC sentinel; server stores approx this time
+          FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
         except
           on E: Exception do
             Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
@@ -834,7 +833,7 @@ begin
             '  Local: ' + FmtDT(LInfo.MTime));
           Inc(Downloaded);
           FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
-          FLastSyncedMTime.AddOrSetValue('L:' + Key, Now); // local time sentinel; LInfo.MTime approx this
+          FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
           var
           NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
           TMainThreadRunner.Queue(
@@ -895,68 +894,71 @@ begin
       LocalList := TList<TSyncFileInfo>.Create;
       RemoteList := TList<TSyncFileInfo>.Create;
       try
-        // -- 1. Collect local files ------------------------------------------
-        Self_.CollectLocalFiles(LocalList);
+        try
+          // -- 1. Collect local files ----------------------------------------
+          Self_.CollectLocalFiles(LocalList);
 
-        if LocalList.Count = 0 then
-        begin
-          Self_.Log('No local project files found in: ' + LocalBase);
-          Exit;
+          if LocalList.Count = 0 then
+          begin
+            Self_.Log('No local project files found in: ' + LocalBase);
+            Exit;
+          end;
+
+          // -- 2. Connect ---------------------------------------------------
+          if not Self_.ConnectSftp(Session, Sftp) then
+            Exit;
+
+          // -- 3. Ensure remote base directory exists -----------------------
+          if not Sftp.DirectoryExists(RemoteBase) then
+          begin
+            Self_.EnsureRemoteDir(RemoteBase, Sftp);
+            Self_.Log('Created remote directory: ' + RemoteBase);
+          end;
+
+          // -- 4. Collect remote files ---------------------------------------
+          Self_.CollectRemoteFiles(Sftp, RemoteBase, RemoteList, IncludeSub);
+
+          // -- 5. Compare and sync -------------------------------------------
+          Self_.SyncLists(Sftp, LocalList, RemoteList);
+
+        except
+          on E: Exception do
+            Self_.Log('Sync error: ' + E.Message);
         end;
 
-        // -- 2. Connect -----------------------------------------------------
-        if not Self_.ConnectSftp(Session, Sftp) then
-          Exit;
-
-        // -- 3. Ensure remote base directory exists --------------------------
-        if not Sftp.DirectoryExists(RemoteBase) then
-        begin
-          Self_.EnsureRemoteDir(RemoteBase, Sftp);
-          Self_.Log('Created remote directory: ' + RemoteBase);
+      finally
+        // -- 6. Disconnect ---------------------------------------------------
+        // Nil Sftp first (releases SFTP channel), then disconnect SSH session.
+        // Assign to local non-interface variable to break the closure's reference
+        // so libssh2 can fully tear down before the next cycle connects.
+        try
+          Sftp := nil;
+        except
         end;
-
-        // -- 4. Collect remote files -----------------------------------------
-        Self_.CollectRemoteFiles(Sftp, RemoteBase, RemoteList, IncludeSub);
-
-        // -- 5. Compare and sync ---------------------------------------------
-        Self_.SyncLists(Sftp, LocalList, RemoteList);
-
-      except
-        on E: Exception do
-          Self_.Log('Sync error: ' + E.Message);
-      end;
-
-      // -- 6. Disconnect -------------------------------------------------------
-      // Nil Sftp first (releases SFTP channel), then disconnect SSH session.
-      // Assign to local non-interface variable to break the closure's reference
-      // so libssh2 can fully tear down before the next cycle connects.
-      try
-        Sftp := nil;
-      except
-      end;
-      try
-        if Assigned(Session) then
-        begin
-          Session.Disconnect;
-          Session := nil;
+        try
+          if Assigned(Session) then
+          begin
+            Session.Disconnect;
+            Session := nil;
+          end;
+        except
         end;
-      except
+        // Give libssh2 a moment to complete TCP teardown before the closure
+        // frame (and any remaining interface refs) is garbage-collected.
+        Sleep(200);
+
+        LocalList.Free;
+        RemoteList.Free;
+
+        // Consume any watcher event that fired during this cycle
+        WaitForSingleObject(Self_.FImmediateSync, 0);
+
+        TMainThreadRunner.Queue(
+          procedure
+          begin
+            Self_.FSyncBusy := False;
+          end);
       end;
-      // Give libssh2 a moment to complete TCP teardown before the closure
-      // frame (and any remaining interface refs) is garbage-collected.
-      Sleep(200);
-
-      LocalList.Free;
-      RemoteList.Free;
-
-      // Consume any watcher event that fired during this cycle
-      WaitForSingleObject(Self_.FImmediateSync, 0);
-
-      TMainThreadRunner.Queue(
-        procedure
-        begin
-          Self_.FSyncBusy := False;
-        end);
     end));
 end;
 
