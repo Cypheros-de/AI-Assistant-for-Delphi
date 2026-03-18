@@ -1,4 +1,4 @@
-﻿object AboutDialog: TAboutDialog
+object AboutDialog: TAboutDialog
   Left = 0
   Top = 0
   BorderStyle = bsDialog
@@ -11,14 +11,18 @@
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OldCreateOrder = True
   Position = poScreenCenter
-  TextHeight = 25
+  DesignSize = (
+    400
+    351)
   PixelsPerInch = 96
+  TextHeight = 15
   object LabelVersion: TLabel
     Left = 20
     Top = 76
     Width = 41
-    Height = 17
+    Height = 15
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -34,8 +38,8 @@
   object LabelDev: TLabel
     Left = 20
     Top = 100
-    Width = 113
-    Height = 17
+    Width = 112
+    Height = 15
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -62,8 +66,8 @@
   object LabelLicenseGPLText: TLabel
     Left = 20
     Top = 140
-    Width = 253
-    Height = 17
+    Width = 252
+    Height = 15
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -79,8 +83,8 @@
   object LinkLicenseGPL: TLabel
     Left = 20
     Top = 158
-    Width = 229
-    Height = 17
+    Width = 226
+    Height = 15
     Cursor = crHandPoint
     Margins.Left = 5
     Margins.Top = 5
@@ -109,10 +113,10 @@
     ExplicitTop = 279
   end
   object LinkWebsite: TLabel
-    Left = 20
+    Left = 122
     Top = 283
-    Width = 143
-    Height = 17
+    Width = 142
+    Height = 15
     Cursor = crHandPoint
     Margins.Left = 5
     Margins.Top = 5
@@ -131,8 +135,8 @@
   object LabelLicenseMITText: TLabel
     Left = 20
     Top = 184
-    Width = 315
-    Height = 17
+    Width = 314
+    Height = 15
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -148,8 +152,8 @@
   object LinkLicenseMIT: TLabel
     Left = 20
     Top = 202
-    Width = 65
-    Height = 17
+    Width = 63
+    Height = 15
     Cursor = crHandPoint
     Margins.Left = 5
     Margins.Top = 5
@@ -168,7 +172,7 @@
     Left = 20
     Top = 228
     Width = 65
-    Height = 17
+    Height = 15
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -184,8 +188,8 @@
   object LinkSourceCode: TLabel
     Left = 20
     Top = 246
-    Width = 320
-    Height = 17
+    Width = 312
+    Height = 15
     Cursor = crHandPoint
     Margins.Left = 5
     Margins.Top = 5
@@ -225,8 +229,8 @@
     StyleElements = [seFont, seBorder]
   end
   object BtnClose: TButton
-    Left = 304
-    Top = 311
+    Left = 150
+    Top = 313
     Width = 80
     Height = 28
     Margins.Left = 5

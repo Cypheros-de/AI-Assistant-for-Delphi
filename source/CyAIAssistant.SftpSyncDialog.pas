@@ -12,6 +12,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
   Vcl.Dialogs,
   ToolsAPI,
+  GDIPOBJ, GDIPAPI,
   SSHPascal.Ssh2Client,
   CyAIAssistant.SftpSync;
 
@@ -85,6 +86,7 @@ type
     PanelLogBtns: TPanel;
     BtnClearLog: TButton;
     GroupBoxPermissions: TGroupBox;
+    PaintBox1: TPaintBox;
     // -- Events ----------------------------------------------------------
     procedure BtnStartStopClick(Sender: TObject);
     procedure BtnTestConnectionClick(Sender: TObject);
@@ -96,7 +98,9 @@ type
     procedure BtnClearLogClick(Sender: TObject);
     procedure BtnCloseClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure PaintBox1Paint(Sender: TObject);
   private
+    StatusColor: Cardinal;
     procedure UpdateStatusUI;
     procedure OnSyncLog(const AMsg: string);
     procedure LoadSettings;
@@ -194,16 +198,20 @@ var
 begin
   if GSftpSync.IsRunning then
   begin
-    LabelStatus.Caption := '[*] Active';
+    LabelStatus.Caption := 'Active';
     LabelStatus.Font.Color := clLime;
+    StatusColor := MakeColor(160, 0, 255, 0);
+    PaintBox1.Repaint;
     BtnStartStop.Caption := 'Stop Sync';
     BtnStartStop.Font.Color := clMaroon;
     CanForce := False;
   end
   else
   begin
-    LabelStatus.Caption := '[ ] Inactive';
+    LabelStatus.Caption := 'Inactive';
     LabelStatus.Font.Color := clSilver;
+    StatusColor := MakeColor(160, 180, 180, 180);
+    PaintBox1.Repaint;
     BtnStartStop.Caption := 'Start Sync';
     BtnStartStop.Font.Color := clWindowText;
     CanForce := not GSftpSync.IsBusy;
@@ -783,6 +791,25 @@ begin
   if Assigned(GSftpSync) then
     GSftpSync.OnLog := nil;
   Action := caFree; // free the form instance on close
+end;
+
+procedure TSftpSyncDialog.PaintBox1Paint(Sender: TObject);
+var
+   g: TGPGraphics;
+   GPBrush: TGPBrush;
+begin
+   g := TGPGraphics.Create(PaintBox1.Canvas.Handle);
+   try
+     g.SetSmoothingMode(SmoothingModeAntiAlias);
+     GPBrush := TGPSolidBrush.Create(StatusColor);
+     try
+       g.FillPie(GPBrush, MakeRect(1,1, PaintBox1.Width-2, PaintBox1.Height-2), 0, 360);
+     finally
+       GPBrush.Free;
+     end;
+   finally
+     g.Free;
+   end;
 end;
 
 end.

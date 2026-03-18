@@ -59,7 +59,6 @@ object SftpSyncDialog: TSftpSyncDialog
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      Alignment = taRightJustify
       Anchors = [akTop, akRight]
       Caption = 'Inactive'
       Font.Charset = DEFAULT_CHARSET
@@ -69,6 +68,14 @@ object SftpSyncDialog: TSftpSyncDialog
       Font.Style = []
       ParentFont = False
       ExplicitLeft = 629
+    end
+    object PaintBox1: TPaintBox
+      Left = 552
+      Top = 14
+      Width = 20
+      Height = 20
+      Anchors = [akTop, akRight]
+      OnPaint = PaintBox1Paint
     end
   end
   object PanelBottom: TPanel
@@ -157,7 +164,7 @@ object SftpSyncDialog: TSftpSyncDialog
     Margins.Top = 5
     Margins.Right = 5
     Margins.Bottom = 5
-    ActivePage = TabConnection
+    ActivePage = TabOptions
     Align = alClient
     TabOrder = 0
     object TabConnection: TTabSheet
