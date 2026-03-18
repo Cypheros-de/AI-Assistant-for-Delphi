@@ -3,7 +3,8 @@
 /source/__backup
 /source/*.identcache
 /source/*.local
+/source/*.sync
 /lib
 /*.dcu
 /*.bak
-/.sync
+/*.sync
