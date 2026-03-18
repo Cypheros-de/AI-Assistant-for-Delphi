@@ -1,58 +1,56 @@
-unit CyAIAssistant.SftpSync;
+﻿unit CyAIAssistant.SftpSync;
 
-{
-  CyAIAssistant.SftpSync.pas
-
-  Bidirectional SFTP sync engine for the Cypheros AI Assistant IDE plugin.
-
-  Architecture
-  ------------
-  One background TTask runs on a timer (interval seconds).  Each cycle:
-
-  1.  Collect local file list
-  Walk FLocalBasePath recursively (if configured), collect all files
-  matching watched extensions with their path, size and last-write time.
-
-  2.  Connect to SFTP server
-  CreateSession / UserAuth / CreateSftpClient.
-
-  3.  Ensure remote base directory exists (ForceDirectories).
-
-  4.  Collect remote file list
-  Walk FRemoteBasePath via ISftpClient.DirContent, same extensions.
-
-  5.  Compare and sync
-  For each file present on BOTH sides: copy the newer version to the
-  other side (1-second tolerance to avoid oscillation).
-  For files present only locally: upload.
-  For files present only remotely: download.
-
-  6.  Disconnect.
-
-  Local-change watcher (FindFirstChangeNotification) triggers an immediate
-  extra sync cycle whenever any file in the project folder changes, so edits
-  are synced within ~500 ms rather than waiting for the next timer tick.
-
-  SSH-Pascal API  (Ssh2Client.pas / SftpClient.pas)
-  -------------------------------------------------
-  CreateSession(Host, Port)  : ISshSession
-  .SetTimeout(ms)
-  .ConfigKnownHostCheckPolicy(Enable, Policy)
-  .Connect
-  .UserAuthPass(User, Pass) : Boolean
-  .UserAuthKey(User, PubKey, PrivKey) : Boolean
-  .Disconnect
-
-  CreateSftpClient(Session)  : ISftpClient
-  .DirectoryExists(Dir)    : Boolean
-  .ForceDirectories(Dir)   : Boolean
-  .CreateDir(Dir, Permissions) : Boolean
-  .DirContent(Dir)         : TSftpItems   (TSftpItem.FileName, .FileSize,
-  .LastModificationTime, .ItemType)
-  .ExtractFilePath(Path)   : string
-  .Send(Local, Remote, Overwrite, Permissions)
-  .Receive(Remote, Local, Overwrite)
-}
+// CyAIAssistant.SftpSync.pas
+//
+// Bidirectional SFTP sync engine for the Cypheros AI Assistant IDE plugin.
+//
+// Architecture
+// ------------
+// One background TTask runs on a timer (interval seconds).  Each cycle:
+//
+// 1.  Collect local file list
+// Walk FLocalBasePath recursively (if configured), collect all files
+// matching watched extensions with their path, size and last-write time.
+//
+// 2.  Connect to SFTP server
+// CreateSession / UserAuth / CreateSftpClient.
+//
+// 3.  Ensure remote base directory exists (ForceDirectories).
+//
+// 4.  Collect remote file list
+// Walk FRemoteBasePath via ISftpClient.DirContent, same extensions.
+//
+// 5.  Compare and sync
+// For each file present on BOTH sides: copy the newer version to the
+// other side (1-second tolerance to avoid oscillation).
+// For files present only locally: upload.
+// For files present only remotely: download.
+//
+// 6.  Disconnect.
+//
+// Local-change watcher (FindFirstChangeNotification) triggers an immediate
+// extra sync cycle whenever any file in the project folder changes, so edits
+// are synced within ~500 ms rather than waiting for the next timer tick.
+//
+// SSH-Pascal API  (Ssh2Client.pas / SftpClient.pas)
+// -------------------------------------------------
+// CreateSession(Host, Port)  : ISshSession
+// .SetTimeout(ms)
+// .ConfigKnownHostCheckPolicy(Enable, Policy)
+// .Connect
+// .UserAuthPass(User, Pass) : Boolean
+// .UserAuthKey(User, PubKey, PrivKey) : Boolean
+// .Disconnect
+//
+// CreateSftpClient(Session)  : ISftpClient
+// .DirectoryExists(Dir)    : Boolean
+// .ForceDirectories(Dir)   : Boolean
+// .CreateDir(Dir, Permissions) : Boolean
+// .DirContent(Dir)         : TSftpItems   (TSftpItem.FileName, .FileSize,
+// .LastModificationTime, .ItemType)
+// .ExtractFilePath(Path)   : string
+// .Send(Local, Remote, Overwrite, Permissions)
+// .Receive(Remote, Local, Overwrite)
 
 interface
 
@@ -68,7 +66,7 @@ uses
 type
   TSftpLogEvent = reference to procedure(const AMsg: string);
 
-  { One entry in a file list }
+  // One entry in a file list
   TSyncFileInfo = record
     RelPath: string; // path relative to base, forward slashes
     Size: Int64;
@@ -109,6 +107,11 @@ type
     FLastSyncedMTime: TDictionary<string, TDateTime>;
     // -- Backup -------------------------------------------------------------
     FBackupEnabled: Boolean;
+    // -- Remote quiet period ------------------------------------------------
+    FRemoteQuietPeriodSecs: Integer; // hold downloads until remote is stable this long
+    FLastRemoteChangeAt: TDateTime; // local time of last observed remote mtime change
+    FLastSeenRemoteMTime: TDictionary<string, TDateTime>; // remote mtime from previous cycle
+    FRemoteQuietActive: Boolean; // True while waiting for quiet period to elapse
 
     procedure Log(const AMsg: string);
     function NextBackupZipPath: string;
@@ -129,8 +132,7 @@ type
     destructor Destroy; override;
 
     procedure Configure(const AHost: string; APort: Word; const AUserName, APassword: string; const APrivateKeyPath, APublicKeyPath: string;
-      const ARemoteBasePath, ALocalBasePath: string; AIncludeSubDirs: Boolean; APermissions: TFilePermissions;
-      const AWatchedExts: TArray<string>);
+      const ARemoteBasePath, ALocalBasePath: string; AIncludeSubDirs: Boolean; APermissions: TFilePermissions; const AWatchedExts: TArray<string>);
     procedure Start(const AHost: string; APort: Word; const AUserName, APassword: string; const APrivateKeyPath, APublicKeyPath: string;
       const ARemoteBasePath, ALocalBasePath: string; AIncludeSubDirs: Boolean; AIntervalSeconds: Integer; APermissions: TFilePermissions;
       const AWatchedExts: TArray<string>);
@@ -146,6 +148,7 @@ type
     property LogBuffer: TStringList read FLogBuffer;
     property OnLog: TSftpLogEvent read FOnLog write FOnLog;
     property BackupEnabled: Boolean read FBackupEnabled write FBackupEnabled;
+    property RemoteQuietPeriodSecs: Integer read FRemoteQuietPeriodSecs write FRemoteQuietPeriodSecs;
     property IsBusy: Boolean read FSyncBusy;
   end;
 
@@ -164,9 +167,9 @@ uses
   Vcl.Dialogs,
   Vcl.Forms;
 
-{ ===========================================================================
-  TMainThreadRunner
-  =========================================================================== }
+// ===========================================================================
+// TMainThreadRunner
+// ===========================================================================
 
 type
   TMainThreadRunner = class
@@ -195,10 +198,10 @@ begin
   TThread.Queue(nil, Runner.Run);
 end;
 
-{ ===========================================================================
-  TWatcherThread
-  Fires FImmediateSync event when any project file changes locally.
-  =========================================================================== }
+// ===========================================================================
+// TWatcherThread
+// Fires FImmediateSync event when any project file changes locally.
+// ===========================================================================
 
 type
   TWatcherThread = class(TThread)
@@ -255,15 +258,17 @@ begin
   end;
 end;
 
-{ ===========================================================================
-  TSftpSyncEngine
-  =========================================================================== }
+// ===========================================================================
+// TSftpSyncEngine
+// ===========================================================================
 
 constructor TSftpSyncEngine.Create;
 begin
   inherited;
   FLogBuffer := TStringList.Create;
   FLastSyncedMTime := TDictionary<string, TDateTime>.Create;
+  FLastSeenRemoteMTime := TDictionary<string, TDateTime>.Create;
+  FRemoteQuietPeriodSecs := 60;
   FStopEvent := CreateEvent(nil, True, False, nil);
   FImmediateSync := CreateEvent(nil, False, False, nil);
 
@@ -279,6 +284,7 @@ begin
   CloseHandle(FImmediateSync);
   CloseHandle(FStopEvent);
   FLastSyncedMTime.Free;
+  FLastSeenRemoteMTime.Free;
   FLogBuffer.Free;
   inherited;
 end;
@@ -309,24 +315,23 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Configure / Start / Stop
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Configure / Start / Stop
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.Configure(const AHost: string; APort: Word; const AUserName, APassword: string; const APrivateKeyPath, APublicKeyPath: string;
-  const ARemoteBasePath, ALocalBasePath: string; AIncludeSubDirs: Boolean; APermissions: TFilePermissions;
-  const AWatchedExts: TArray<string>);
+const ARemoteBasePath, ALocalBasePath: string; AIncludeSubDirs: Boolean; APermissions: TFilePermissions; const AWatchedExts: TArray<string>);
 begin
-  FHost           := AHost;
-  FPort           := APort;
-  FUserName       := AUserName;
-  FPassword       := APassword;
+  FHost := AHost;
+  FPort := APort;
+  FUserName := AUserName;
+  FPassword := APassword;
   FPrivateKeyPath := APrivateKeyPath;
-  FPublicKeyPath  := APublicKeyPath;
+  FPublicKeyPath := APublicKeyPath;
   FRemoteBasePath := ARemoteBasePath;
-  FLocalBasePath  := ExcludeTrailingPathDelimiter(ALocalBasePath);
+  FLocalBasePath := ExcludeTrailingPathDelimiter(ALocalBasePath);
   FIncludeSubDirs := AIncludeSubDirs;
-  FPermissions    := APermissions;
+  FPermissions := APermissions;
   // Derive directory permissions: for each class (user/group/other) that has
   // read or write access, also grant execute (= traversal for directories).
   FDirPermissions := APermissions;
@@ -345,11 +350,13 @@ const AWatchedExts: TArray<string>);
 begin
   Stop;
 
-  Configure(AHost, APort, AUserName, APassword, APrivateKeyPath, APublicKeyPath,
-    ARemoteBasePath, ALocalBasePath, AIncludeSubDirs, APermissions, AWatchedExts);
+  Configure(AHost, APort, AUserName, APassword, APrivateKeyPath, APublicKeyPath, ARemoteBasePath, ALocalBasePath, AIncludeSubDirs, APermissions, AWatchedExts);
 
   FIntervalMs := Max(1, AIntervalSeconds) * 1000;
   FSyncBusy := False;
+  FLastRemoteChangeAt := 0;
+  FRemoteQuietActive := False;
+  FLastSeenRemoteMTime.Clear;
   // FLastSyncedMTime is populated by LoadCacheFrom (called by dialog before
   // Start) -- do NOT clear it here or the restored cache is lost.
 
@@ -373,15 +380,16 @@ begin
   Log('Sync stopped.');
 end;
 
-{ ---------------------------------------------------------------------------
-  ForcePushAll -- upload every local file unconditionally
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// ForcePushAll -- upload every local file unconditionally
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.ForcePushAll(AOnDone: TProc = nil);
 var
   Self_: TSftpSyncEngine;
 begin
-  if FSyncBusy then Exit;
+  if FSyncBusy then
+    Exit;
   if FHost = '' then
   begin
     Log('Push All: not configured — fill in the settings and click Start once first.');
@@ -399,7 +407,7 @@ begin
       Pushed: Integer;
     begin
       Session := nil;
-      Sftp    := nil;
+      Sftp := nil;
       LocalList := TList<TSyncFileInfo>.Create;
       try
         try
@@ -433,7 +441,10 @@ begin
             Self_.Log('Push All error: ' + E.Message);
         end;
       finally
-        try Sftp := nil; except end;
+        try
+          Sftp := nil;
+        except
+        end;
         try
           if Assigned(Session) then
           begin
@@ -448,21 +459,23 @@ begin
           procedure
           begin
             Self_.FSyncBusy := False;
-            if Assigned(AOnDone) then AOnDone;
+            if Assigned(AOnDone) then
+              AOnDone;
           end);
       end;
     end));
 end;
 
-{ ---------------------------------------------------------------------------
-  ForcePullAll -- download every remote file unconditionally
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// ForcePullAll -- download every remote file unconditionally
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.ForcePullAll(AOnDone: TProc = nil);
 var
   Self_: TSftpSyncEngine;
 begin
-  if FSyncBusy then Exit;
+  if FSyncBusy then
+    Exit;
   if FHost = '' then
   begin
     Log('Pull All: not configured — fill in the settings and click Start once first.');
@@ -483,12 +496,12 @@ begin
       BackedUp: Integer;
       LocalPath: string;
     begin
-      Session   := nil;
-      Sftp      := nil;
+      Session := nil;
+      Sftp := nil;
       RemoteList := TList<TSyncFileInfo>.Create;
       BackupZip := nil;
       BackupZipPath := '';
-      BackedUp  := 0;
+      BackedUp := 0;
       try
         try
           if not Self_.ConnectSftp(Session, Sftp) then
@@ -505,8 +518,7 @@ begin
             // Backup existing local file before overwriting
             if Self_.FBackupEnabled then
             begin
-              LocalPath := Self_.FLocalBasePath + PathDelim +
-                StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
+              LocalPath := Self_.FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
               if TFile.Exists(LocalPath) then
               begin
                 if BackupZip = nil then
@@ -532,8 +544,7 @@ begin
                 Self_.Log('[PULL FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
             end;
           end;
-          Self_.Log('Pull All complete: ' + IntToStr(Pulled) + ' / ' + IntToStr(RemoteList.Count) +
-            ' file(s) downloaded. Reload any open files from disk.');
+          Self_.Log('Pull All complete: ' + IntToStr(Pulled) + ' / ' + IntToStr(RemoteList.Count) + ' file(s) downloaded. Reload any open files from disk.');
         except
           on E: Exception do
             Self_.Log('Pull All error: ' + E.Message);
@@ -546,7 +557,10 @@ begin
           if BackedUp > 0 then
             Self_.Log('[BACKUP] ' + IntToStr(BackedUp) + ' file(s) saved to ' + TPath.GetFileName(BackupZipPath));
         end;
-        try Sftp := nil; except end;
+        try
+          Sftp := nil;
+        except
+        end;
         try
           if Assigned(Session) then
           begin
@@ -561,7 +575,8 @@ begin
           procedure
           begin
             Self_.FSyncBusy := False;
-            if Assigned(AOnDone) then AOnDone;
+            if Assigned(AOnDone) then
+              AOnDone;
           end);
       end;
     end));
@@ -580,9 +595,9 @@ begin
   FWatchThread := nil;
 end;
 
-{ ---------------------------------------------------------------------------
-  Timer -- checks if an immediate sync was requested, then runs cycle
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Timer -- checks if an immediate sync was requested, then runs cycle
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.OnSyncTimer(Sender: TObject);
 begin
@@ -592,9 +607,9 @@ begin
   DoSyncCycle;
 end;
 
-{ ---------------------------------------------------------------------------
-  SFTP connection helper
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// SFTP connection helper
+// ---------------------------------------------------------------------------
 
 function TSftpSyncEngine.ConnectSftp(out Session: ISshSession; out Sftp: ISftpClient): Boolean;
 var
@@ -659,9 +674,9 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Collect local file list
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Collect local file list
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.CollectLocalFiles(AList: TList<TSyncFileInfo>);
 var
@@ -719,9 +734,9 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Collect remote file list
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Collect remote file list
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.CollectRemoteFiles(Sftp: ISftpClient; const ARemoteDir: string; AList: TList<TSyncFileInfo>; ARecurse: Boolean);
 var
@@ -734,6 +749,8 @@ var
   Sub: string;
   // Strip remote base to produce a RelPath consistent with local side
   BaseLen: Integer;
+  FullRemote: string;
+  Rel: string;
 begin
   BaseLen := Length(FRemoteBasePath);
   // Ensure no trailing slash in base for consistent stripping
@@ -775,10 +792,7 @@ begin
       Continue;
 
     // Build relative path: strip remote base prefix
-    var
     FullRemote := Sub;
-    var
-      Rel: string;
     if (Length(FullRemote) > BaseLen) and (Copy(FullRemote, 1, BaseLen) = Copy(FRemoteBasePath, 1, BaseLen)) then
     begin
       Rel := Copy(FullRemote, BaseLen + 2, MaxInt); // +2 skips the /
@@ -793,13 +807,13 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  EnsureRemoteDir
-  Creates each missing segment of ARemoteDir with FDirPermissions.
-  SSH-Pascal's ForceDirectories ignores permissions; we walk the path
-  manually and call CreateDir on each segment so the server receives
-  the correct mode for every new directory.
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// EnsureRemoteDir
+// Creates each missing segment of ARemoteDir with FDirPermissions.
+// SSH-Pascal's ForceDirectories ignores permissions; we walk the path
+// manually and call CreateDir on each segment so the server receives
+// the correct mode for every new directory.
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.EnsureRemoteDir(const ARemoteDir: string; Sftp: ISftpClient);
 var
@@ -838,9 +852,9 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Upload / Download single file
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Upload / Download single file
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.UploadFile(const ARelPath: string; Sftp: ISftpClient);
 var
@@ -853,7 +867,7 @@ begin
   RemoteDir := Sftp.ExtractFilePath(RemotePath);
   if (RemoteDir <> '') and not Sftp.DirectoryExists(RemoteDir) then
     EnsureRemoteDir(RemoteDir, Sftp);
-  Sftp.Send(LocalPath, RemotePath, { Overwrite= } True, FPermissions);
+  Sftp.Send(LocalPath, RemotePath, True, FPermissions);
 end;
 
 procedure TSftpSyncEngine.DownloadFile(const ARelPath: string; Sftp: ISftpClient);
@@ -867,12 +881,12 @@ begin
   LocalDir := TPath.GetDirectoryName(LocalPath);
   if (LocalDir <> '') and not TDirectory.Exists(LocalDir) then
     TDirectory.CreateDirectory(LocalDir);
-  Sftp.Receive(RemotePath, LocalPath, { Overwrite= } True);
+  Sftp.Receive(RemotePath, LocalPath, True);
 end;
 
-{ ---------------------------------------------------------------------------
-  Backup support
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Backup support
+// ---------------------------------------------------------------------------
 
 function TSftpSyncEngine.NextBackupZipPath: string;
 var
@@ -889,16 +903,16 @@ begin
   for F in Files do
   begin
     BaseName := TPath.GetFileNameWithoutExtension(F);
-    if TryStrToInt(Copy(BaseName, 8, MaxInt), Num) then  // skip 'backup_' (7 chars)
+    if TryStrToInt(Copy(BaseName, 8, MaxInt), Num) then // skip 'backup_' (7 chars)
       if Num > MaxNum then
         MaxNum := Num;
   end;
   Result := BackupDir + PathDelim + Format('backup_%.3d.zip', [MaxNum + 1]);
 end;
 
-{ ---------------------------------------------------------------------------
-  Compare lists and sync
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Compare lists and sync
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.SyncLists(Sftp: ISftpClient; Local, Remote: TList<TSyncFileInfo>);
 const
@@ -911,6 +925,7 @@ var
   LInfo: TSyncFileInfo;
   RInfo: TSyncFileInfo;
   Key: string;
+  QKey: string;
   Uploaded: Integer;
   Downloaded: Integer;
   // Last remote UTC mtime we saw for each file -- cached across cycles.
@@ -920,6 +935,19 @@ var
   BackupZip: TZipFile;
   BackupZipPath: string;
   BackedUp: Integer;
+  CanDownload: Boolean;
+  HaveCache: Boolean;
+  LastSeen: TDateTime;
+  SeenChange: Boolean;
+  LocalChanged: Boolean;
+  RemoteChanged: Boolean;
+  NotifyPath: String;
+  LocalPath: String;
+  LocalUtc: TDateTime;
+  Diff: TDateTime;
+  ActualR1: TDateTime;
+  ActualR2: TDateTime;
+  ActualR3: TDateTime;
 
   function FmtDT(const ADateTime: TDateTime): string;
   begin
@@ -933,9 +961,11 @@ var
   var
     LocalPath: string;
   begin
-    if not FBackupEnabled then Exit;
+    if not FBackupEnabled then
+      Exit;
     LocalPath := FLocalBasePath + PathDelim + StringReplace(ARelPath, '/', PathDelim, [rfReplaceAll]);
-    if not TFile.Exists(LocalPath) then Exit;
+    if not TFile.Exists(LocalPath) then
+      Exit;
     if BackupZip = nil then
     begin
       BackupZipPath := NextBackupZipPath;
@@ -966,6 +996,47 @@ begin
     for RInfo in Remote do
       RemoteMap.AddOrSetValue(LowerCase(RInfo.RelPath), RInfo);
 
+    // -- Remote quiet period -------------------------------------------------
+    // Compare each remote file's current mtime against what we saw last cycle.
+    // If any known file changed, reset the quiet timer.  Downloads are held
+    // until the remote has been stable for FRemoteQuietPeriodSecs seconds so
+    // we never download a file that is still being written on the server.
+    CanDownload := True;
+    begin
+      SeenChange := False;
+      for RInfo in Remote do
+      begin
+        QKey := LowerCase(RInfo.RelPath);
+        if FLastSeenRemoteMTime.TryGetValue(QKey, LastSeen) then
+          if Abs(RInfo.MTime - LastSeen) > TOLERANCE then
+          begin
+            SeenChange := True;
+            Break;
+          end;
+      end;
+      // Always update the last-seen map so each cycle only tracks NEW changes
+      for RInfo in Remote do
+        FLastSeenRemoteMTime.AddOrSetValue(LowerCase(RInfo.RelPath), RInfo.MTime);
+      if SeenChange then
+      begin
+        if not FRemoteQuietActive then
+          Log('Remote changes detected - holding downloads for ' + IntToStr(FRemoteQuietPeriodSecs) + 's quiet period.');
+        FRemoteQuietActive := True;
+        FLastRemoteChangeAt := Now;
+      end;
+      if FRemoteQuietActive then
+      begin
+        if (Now - FLastRemoteChangeAt) * 86400.0 < FRemoteQuietPeriodSecs then
+          CanDownload := False
+        else
+        begin
+          Log('Remote quiet - resuming downloads.');
+          FRemoteQuietActive := False;
+          FLastRemoteChangeAt := 0;
+        end;
+      end;
+    end;
+
     // -- Files only on local -> upload ---------------------------------------
     for LInfo in Local do
     begin
@@ -977,7 +1048,11 @@ begin
         Log('[UP] ' + TPath.GetFileName(LInfo.RelPath) + '  Reason: not on remote' + '  Local: ' + FmtDT(LInfo.MTime));
         Inc(Uploaded);
         FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-        FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
+        ActualR1 := Sftp.GetRemoteMTime(FRemoteBasePath + '/' + LInfo.RelPath);
+        if ActualR1 = 0 then
+          ActualR1 := TTimeZone.Local.ToUniversalTime(LInfo.MTime);
+        FLastSyncedMTime.AddOrSetValue('R:' + Key, ActualR1);
+        FLastSeenRemoteMTime.AddOrSetValue(Key, ActualR1);
       except
         on E: Exception do
           Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
@@ -985,29 +1060,29 @@ begin
     end;
 
     // -- Files only on remote -> download ------------------------------------
-    for RInfo in Remote do
-    begin
-      Key := LowerCase(RInfo.RelPath);
-      if LocalMap.ContainsKey(Key) then
-        Continue;
-      try
-        DownloadFile(RInfo.RelPath, Sftp);
-        Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: not local' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
-        Inc(Downloaded);
-        FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
-        FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
-        var
-        NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
-        TMainThreadRunner.Queue(
-          procedure
-          begin
-            NotifyIDEIfOpen(NotifyPath);
-          end);
-      except
-        on E: Exception do
-          Log('[DOWN FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
+    if CanDownload then
+      for RInfo in Remote do
+      begin
+        Key := LowerCase(RInfo.RelPath);
+        if LocalMap.ContainsKey(Key) then
+          Continue;
+        try
+          DownloadFile(RInfo.RelPath, Sftp);
+          Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: not local' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
+          Inc(Downloaded);
+          FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
+          FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
+          NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
+          TMainThreadRunner.Queue(
+            procedure
+            begin
+              NotifyIDEIfOpen(NotifyPath);
+            end);
+        except
+          on E: Exception do
+            Log('[DOWN FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
+        end;
       end;
-    end;
 
     // -- Files on both sides -------------------------------------------------
     for LInfo in Local do
@@ -1016,14 +1091,11 @@ begin
       if not RemoteMap.TryGetValue(Key, RInfo) then
         Continue;
 
-      var
       HaveCache := FLastSyncedMTime.TryGetValue('L:' + Key, LastLocal) and FLastSyncedMTime.TryGetValue('R:' + Key, LastRemote);
 
       if HaveCache then
       begin
-        var
         LocalChanged := Abs(LInfo.MTime - LastLocal) > TOLERANCE;
-        var
         RemoteChanged := Abs(RInfo.MTime - LastRemote) > TOLERANCE;
 
         if not LocalChanged and not RemoteChanged then
@@ -1037,7 +1109,11 @@ begin
               FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
             Inc(Uploaded);
             FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-            FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
+            ActualR2 := Sftp.GetRemoteMTime(FRemoteBasePath + '/' + LInfo.RelPath);
+            if ActualR2 = 0 then
+              ActualR2 := TTimeZone.Local.ToUniversalTime(LInfo.MTime);
+            FLastSyncedMTime.AddOrSetValue('R:' + Key, ActualR2);
+            FLastSeenRemoteMTime.AddOrSetValue(Key, ActualR2);
           except
             on E: Exception do
               Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
@@ -1047,15 +1123,67 @@ begin
 
         if RemoteChanged and not LocalChanged then
         begin
+          if CanDownload then
+          begin
+            AddToBackup(RInfo.RelPath);
+            try
+              DownloadFile(RInfo.RelPath, Sftp);
+              Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: remote changed' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)) +
+                '  Local: ' + FmtDT(LInfo.MTime));
+              Inc(Downloaded);
+              FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
+              FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
+              NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
+              TMainThreadRunner.Queue(
+                procedure
+                begin
+                  NotifyIDEIfOpen(NotifyPath);
+                end);
+            except
+              on E: Exception do
+                Log('[DOWN FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
+            end;
+          end;
+          Continue;
+        end;
+
+        // Both changed -> newest wins (fall through)
+      end;
+
+      // No cache or both changed: UTC comparison
+      LocalPath := FLocalBasePath + PathDelim + StringReplace(LInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
+      LocalUtc := TTimeZone.Local.ToUniversalTime(TFile.GetLastWriteTime(LocalPath));
+      Diff := LocalUtc - RInfo.MTime;
+      if Diff > TOLERANCE then
+      begin
+        try
+          UploadFile(LInfo.RelPath, Sftp);
+          Log('[UP] ' + TPath.GetFileName(LInfo.RelPath) + '  Reason: local newer' + '  Local: ' + FmtDT(LInfo.MTime) + '  Remote: ' +
+            FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
+          Inc(Uploaded);
+          FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
+          ActualR3 := Sftp.GetRemoteMTime(FRemoteBasePath + '/' + LInfo.RelPath);
+          if ActualR3 = 0 then
+            ActualR3 := TTimeZone.Local.ToUniversalTime(LInfo.MTime);
+          FLastSyncedMTime.AddOrSetValue('R:' + Key, ActualR3);
+          FLastSeenRemoteMTime.AddOrSetValue(Key, ActualR3);
+        except
+          on E: Exception do
+            Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
+        end;
+      end
+      else if Diff < -TOLERANCE then
+      begin
+        if CanDownload then
+        begin
           AddToBackup(RInfo.RelPath);
           try
             DownloadFile(RInfo.RelPath, Sftp);
-            Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: remote changed' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)) +
+            Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: remote newer' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)) +
               '  Local: ' + FmtDT(LInfo.MTime));
             Inc(Downloaded);
             FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
             FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
-            var
             NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
             TMainThreadRunner.Queue(
               procedure
@@ -1066,54 +1194,6 @@ begin
             on E: Exception do
               Log('[DOWN FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
           end;
-          Continue;
-        end;
-
-        // Both changed -> newest wins (fall through)
-      end;
-
-      // No cache or both changed: UTC comparison
-      var
-      LocalPath := FLocalBasePath + PathDelim + StringReplace(LInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
-      var
-      LocalUtc := TTimeZone.Local.ToUniversalTime(TFile.GetLastWriteTime(LocalPath));
-      var
-      Diff := LocalUtc - RInfo.MTime;
-
-      if Diff > TOLERANCE then
-      begin
-        try
-          UploadFile(LInfo.RelPath, Sftp);
-          Log('[UP] ' + TPath.GetFileName(LInfo.RelPath) + '  Reason: local newer' + '  Local: ' + FmtDT(LInfo.MTime) + '  Remote: ' +
-            FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)));
-          Inc(Uploaded);
-          FLastSyncedMTime.AddOrSetValue('L:' + Key, LInfo.MTime);
-          FLastSyncedMTime.AddOrSetValue('R:' + Key, TTimeZone.Local.ToUniversalTime(LInfo.MTime));
-        except
-          on E: Exception do
-            Log('[UP FAILED] ' + TPath.GetFileName(LInfo.RelPath) + '  (' + E.Message + ')');
-        end;
-      end
-      else if Diff < -TOLERANCE then
-      begin
-        AddToBackup(RInfo.RelPath);
-        try
-          DownloadFile(RInfo.RelPath, Sftp);
-          Log('[DOWN] ' + TPath.GetFileName(RInfo.RelPath) + '  Reason: remote newer' + '  Remote: ' + FmtDT(TTimeZone.Local.ToLocalTime(RInfo.MTime)) +
-            '  Local: ' + FmtDT(LInfo.MTime));
-          Inc(Downloaded);
-          FLastSyncedMTime.AddOrSetValue('R:' + Key, RInfo.MTime);
-          FLastSyncedMTime.AddOrSetValue('L:' + Key, TTimeZone.Local.ToLocalTime(RInfo.MTime));
-          var
-          NotifyPath := FLocalBasePath + PathDelim + StringReplace(RInfo.RelPath, '/', PathDelim, [rfReplaceAll]);
-          TMainThreadRunner.Queue(
-            procedure
-            begin
-              NotifyIDEIfOpen(NotifyPath);
-            end);
-        except
-          on E: Exception do
-            Log('[DOWN FAILED] ' + TPath.GetFileName(RInfo.RelPath) + '  (' + E.Message + ')');
         end;
       end
       else
@@ -1140,9 +1220,9 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Main sync cycle
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Main sync cycle
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.DoSyncCycle;
 var
@@ -1239,9 +1319,9 @@ begin
     end));
 end;
 
-{ ---------------------------------------------------------------------------
-  IDE notification
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// IDE notification
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncEngine.NotifyIDEIfOpen(const ALocalPath: string);
 var
@@ -1271,14 +1351,14 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Cache persistence
-  The [SyncCache] section stores one key-value pair per cached timestamp.
-  Keys are the raw 'L:relpath' / 'R:relpath' strings (colons and slashes
-  are valid in INI values but not in keys, so we base64-encode the key).
-  We use a simpler approach: percent-encode just the characters that TIniFile
-  rejects in key names ( = [ ] ; # newline ).
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Cache persistence
+// The [SyncCache] section stores one key-value pair per cached timestamp.
+// Keys are the raw 'L:relpath' / 'R:relpath' strings (colons and slashes
+// are valid in INI values but not in keys, so we base64-encode the key).
+// We use a simpler approach: percent-encode just the characters that TIniFile
+// rejects in key names ( = [ ] ; # newline ).
+// ---------------------------------------------------------------------------
 
 const
   CACHE_SECTION = 'SyncCache';
@@ -1343,7 +1423,7 @@ procedure TSftpSyncEngine.LoadCacheFrom(const AFilePath: string);
 var
   Ini: TIniFile;
   Keys: TStringList;
-  I: Integer;
+  i: Integer;
   RawKey: string;
   CacheKey: string;
   Val: TDateTime;
@@ -1355,9 +1435,9 @@ begin
   Ini := TIniFile.Create(AFilePath);
   try
     Ini.ReadSection(CACHE_SECTION, Keys);
-    for I := 0 to Keys.Count - 1 do
+    for i := 0 to Keys.Count - 1 do
     begin
-      RawKey := Keys[I];
+      RawKey := Keys[i];
       CacheKey := DecodeKey(RawKey);
       Val := Ini.ReadFloat(CACHE_SECTION, RawKey, 0);
       if Val <> 0 then

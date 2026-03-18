@@ -74,6 +74,8 @@ type
     // Symbolic Links
     function RealPath(Name: string): string;
     function CreateSymLink(const Link, Target: string): Boolean;
+    // Stat
+    function GetRemoteMTime(const RemotePath: string): TDateTime;  // UTC; 0 on failure
     //Send and Receive
     procedure Receive(const RemoteFile: string; Stream: TStream); overload;
     procedure Receive(const RemoteFile, LocalFile: string; Overwrite:Boolean = True); overload;
@@ -271,6 +273,8 @@ type
     // Symbolic Links
     function RealPath(Name: string): string;
     function CreateSymLink(const Link, Target: string): Boolean;
+    // Stat
+    function GetRemoteMTime(const RemotePath: string): TDateTime;
     // Send and Receive
     procedure Receive(const RemoteFile: string; Stream: TStream); overload;
     procedure Receive(const RemoteFile, LocalFile: string; Overwrite: Boolean = True); overload;
@@ -826,6 +830,17 @@ begin
   Attribs.ATime := DateTimeToUnix(LocalUtcMTime, True);
   Attribs.MTime := DateTimeToUnix(LocalUtcMTime, True);
   libssh2_sftp_setstat(FSFtp, M.AsAnsi(RealPath(RemoteFile), FSession.CodePage).ToPointer, Attribs);
+end;
+
+function TSFtpClient.GetRemoteMTime(const RemotePath: string): TDateTime;
+var
+  Attribs: LIBSSH2_SFTP_ATTRIBUTES;
+  M: TMarshaller;
+begin
+  Result := 0;
+  if libssh2_sftp_stat(FSFtp, M.AsAnsi(ExpandTilde(RemotePath), FSession.CodePage).ToPointer, Attribs) = 0 then
+    if TestBit(Attribs.Flags, LIBSSH2_SFTP_ATTR_ACMODTIME) then
+      Result := UnixToDateTime(Attribs.MTime);
 end;
 
 procedure TSFtpClient.SetBufferSize(Size: Int64);

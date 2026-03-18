@@ -1,9 +1,7 @@
 unit CyAIAssistant.PromptDialog;
 
-{
-  CyAIAssistant.PromptDialog.pas
-  Main dialog: select a prompt template, preview code, submit to AI, review diff.
-}
+// CyAIAssistant.PromptDialog.pas
+// Main dialog: select a prompt template, preview code, submit to AI, review diff.
 
 interface
 
@@ -17,31 +15,31 @@ uses
 
 type
   TPromptDialog = class(TForm)
-    PanelTop         : TPanel;
-      LabelTitle     : TLabel;
-    PanelProvider    : TPanel;
-      LabelProvider  : TLabel;
-      LabelModel     : TLabel;
-      ComboProvider  : TComboBox;
-      EditModel      : TEdit;
-    PanelBottom      : TPanel;
-      LabelStatus    : TLabel;
-      CheckStripFences: TCheckBox;
-      ProgressBar    : TProgressBar;
-      BtnSubmit      : TButton;
-      BtnStop        : TButton;
-      BtnCancel      : TButton;
-    PanelLeft        : TPanel;
-      LabelPrompts   : TLabel;
-      LabelCustom    : TLabel;
-      ListPrompts    : TListBox;
-      MemoCustomPrefix: TMemo;
-    Splitter         : TSplitter;
-    PanelRight       : TPanel;
-      LabelCode      : TLabel;
-      LabelFinal     : TLabel;
-      MemoCode       : TMemo;
-      MemoFinalPrompt: TMemo;
+    PanelTop: TPanel;
+    LabelTitle: TLabel;
+    PanelProvider: TPanel;
+    LabelProvider: TLabel;
+    LabelModel: TLabel;
+    ComboProvider: TComboBox;
+    EditModel: TEdit;
+    PanelBottom: TPanel;
+    LabelStatus: TLabel;
+    CheckStripFences: TCheckBox;
+    ProgressBar: TProgressBar;
+    BtnSubmit: TButton;
+    BtnStop: TButton;
+    BtnCancel: TButton;
+    PanelLeft: TPanel;
+    LabelPrompts: TLabel;
+    LabelCustom: TLabel;
+    ListPrompts: TListBox;
+    MemoCustomPrefix: TMemo;
+    Splitter: TSplitter;
+    PanelRight: TPanel;
+    LabelCode: TLabel;
+    LabelFinal: TLabel;
+    MemoCode: TMemo;
+    MemoFinalPrompt: TMemo;
     procedure ComboProviderChange(Sender: TObject);
     procedure ListPromptsClick(Sender: TObject);
     procedure MemoCustomPrefixChange(Sender: TObject);
@@ -49,17 +47,16 @@ type
     procedure BtnStopClick(Sender: TObject);
     procedure BtnCancelClick(Sender: TObject);
   private
-    FSelectedCode : string;
-    FSourceEditor : IOTASourceEditor;
-    FAIClient     : TAIClient;
+    FSelectedCode: string;
+    FSourceEditor: IOTASourceEditor;
+    FAIClient: TAIClient;
     procedure PopulatePrompts;
     procedure UpdateFinalPrompt;
     procedure SetBusy(ABusy: Boolean);
-    function  BuildFinalPrompt: string;
+    function BuildFinalPrompt: string;
     procedure UpdateModelHint;
   public
-    constructor Create(AOwner: TComponent; const ASelectedCode: string;
-      ASourceEditor: IOTASourceEditor); reintroduce;
+    constructor Create(AOwner: TComponent; const ASelectedCode: string; ASourceEditor: IOTASourceEditor); reintroduce;
     destructor Destroy; override;
   end;
 
@@ -71,18 +68,17 @@ uses
   CyAIAssistant.DiffViewer,
   CyAIAssistant.IDETheme;
 
-constructor TPromptDialog.Create(AOwner: TComponent; const ASelectedCode: string;
-  ASourceEditor: IOTASourceEditor);
+constructor TPromptDialog.Create(AOwner: TComponent; const ASelectedCode: string; ASourceEditor: IOTASourceEditor);
 var
   Idx: Integer;
 begin
   inherited Create(AOwner);
   FSelectedCode := ASelectedCode;
   FSourceEditor := ASourceEditor;
-  FAIClient     := TAIClient.Create;
+  FAIClient := TAIClient.Create;
 
   ComboProvider.ItemIndex := Ord(GSettings.Provider);
-  MemoCode.Text           := FSelectedCode;
+  MemoCode.Text := FSelectedCode;
 
   PopulatePrompts;
   UpdateModelHint;
@@ -91,7 +87,8 @@ begin
   if ListPrompts.Count > 0 then
   begin
     Idx := GSettings.LastPromptIndex;
-    if (Idx < 0) or (Idx >= ListPrompts.Count) then Idx := 0;
+    if (Idx < 0) or (Idx >= ListPrompts.Count) then
+      Idx := 0;
     ListPrompts.ItemIndex := Idx;
     UpdateFinalPrompt;
   end;
@@ -117,11 +114,16 @@ end;
 procedure TPromptDialog.UpdateModelHint;
 begin
   case GSettings.Provider of
-    apClaude:  EditModel.Text := GSettings.ClaudeModel;
-    apOpenAI:  EditModel.Text := GSettings.OpenAIModel;
-    apOllama:  EditModel.Text := GSettings.OllamaModel;
-    apGroq:    EditModel.Text := GSettings.GroqModel;
-    apMistral: EditModel.Text := GSettings.MistralModel;
+    apClaude:
+      EditModel.Text := GSettings.ClaudeModel;
+    apOpenAI:
+      EditModel.Text := GSettings.OpenAIModel;
+    apOllama:
+      EditModel.Text := GSettings.OllamaModel;
+    apGroq:
+      EditModel.Text := GSettings.GroqModel;
+    apMistral:
+      EditModel.Text := GSettings.MistralModel;
   end;
 end;
 
@@ -148,15 +150,16 @@ end;
 
 function TPromptDialog.BuildFinalPrompt: string;
 var
-  Idx     : Integer;
+  Idx: Integer;
   Template: string;
 begin
   Result := '';
   Idx := ListPrompts.ItemIndex;
-  if (Idx < 0) or (Idx >= GSettings.Prompts.Count) then Exit;
+  if (Idx < 0) or (Idx >= GSettings.Prompts.Count) then
+    Exit;
   Template := GSettings.Prompts[Idx].Template;
-  Result   := StringReplace(Template, '{CODE}',          FSelectedCode,               [rfReplaceAll]);
-  Result   := StringReplace(Result,   '{CUSTOM_PREFIX}', Trim(MemoCustomPrefix.Text), [rfReplaceAll]);
+  Result := StringReplace(Template, '{CODE}', FSelectedCode, [rfReplaceAll]);
+  Result := StringReplace(Result, '{CUSTOM_PREFIX}', Trim(MemoCustomPrefix.Text), [rfReplaceAll]);
 end;
 
 procedure TPromptDialog.UpdateFinalPrompt;
@@ -166,12 +169,12 @@ end;
 
 procedure TPromptDialog.SetBusy(ABusy: Boolean);
 begin
-  BtnSubmit.Enabled     := not ABusy;
-  BtnStop.Enabled       := ABusy;
-  ListPrompts.Enabled   := not ABusy;
+  BtnSubmit.Enabled := not ABusy;
+  BtnStop.Enabled := ABusy;
+  ListPrompts.Enabled := not ABusy;
   ComboProvider.Enabled := not ABusy;
-  ProgressBar.Visible   := ABusy;
-  LabelStatus.Visible   := not ABusy;
+  ProgressBar.Visible := ABusy;
+  LabelStatus.Visible := not ABusy;
   if ABusy then
     LabelStatus.Caption := 'Sending to AI...'
   else
@@ -196,42 +199,51 @@ begin
   end;
 
   case GSettings.Provider of
-    apClaude:  GSettings.ClaudeModel  := Trim(EditModel.Text);
-    apOpenAI:  GSettings.OpenAIModel  := Trim(EditModel.Text);
-    apOllama:  GSettings.OllamaModel  := Trim(EditModel.Text);
-    apGroq:    GSettings.GroqModel    := Trim(EditModel.Text);
-    apMistral: GSettings.MistralModel := Trim(EditModel.Text);
+    apClaude:
+      GSettings.ClaudeModel := Trim(EditModel.Text);
+    apOpenAI:
+      GSettings.OpenAIModel := Trim(EditModel.Text);
+    apOllama:
+      GSettings.OllamaModel := Trim(EditModel.Text);
+    apGroq:
+      GSettings.GroqModel := Trim(EditModel.Text);
+    apMistral:
+      GSettings.MistralModel := Trim(EditModel.Text);
   end;
 
   SetBusy(True);
-  LabelStatus.Visible  := True;
-  LabelStatus.Caption  := 'Sending to AI - please wait...';
+  LabelStatus.Visible := True;
+  LabelStatus.Caption := 'Sending to AI - please wait...';
   Application.ProcessMessages;
 
-  FAIClient.SendAsync(FinalPrompt, procedure(const AResult, AError: string)
-  begin
-    SetBusy(False);
-
-    if AError <> '' then
+  FAIClient.SendAsync(FinalPrompt,
+    procedure(const AResult, AError: string)
+    var
+      Viewer: TDiffViewerForm;
     begin
-      ShowMessage('AI Error:' + sLineBreak + AError);
-      Exit;
-    end;
+      SetBusy(False);
 
-    if Trim(AResult) = '' then
-    begin
-      ShowMessage('The AI returned an empty response.');
-      Exit;
-    end;
+      if AError <> '' then
+      begin
+        ShowMessage('AI Error:' + sLineBreak + AError);
+        Exit;
+      end;
 
-    var Viewer := TDiffViewerForm.Create(Self, FSelectedCode, AResult, FSourceEditor);
-    try
-      Viewer.ShowModal;
-      if Viewer.Applied then Close;
-    finally
-      Viewer.Free;
-    end;
-  end);
+      if Trim(AResult) = '' then
+      begin
+        ShowMessage('The AI returned an empty response.');
+        Exit;
+      end;
+
+      Viewer := TDiffViewerForm.Create(Self, FSelectedCode, AResult, FSourceEditor);
+      try
+        Viewer.ShowModal;
+        if Viewer.Applied then
+          Close;
+      finally
+        Viewer.Free;
+      end;
+    end);
 end;
 
 procedure TPromptDialog.BtnCancelClick(Sender: TObject);

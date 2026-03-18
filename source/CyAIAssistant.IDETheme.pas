@@ -1,28 +1,26 @@
 ﻿unit CyAIAssistant.IDETheme;
 
-{
-  CyAIAssistant.IDETheme.pas
-
-  Applies the Delphi IDE's current VCL theme to plugin forms.
-
-  Strategy:
-    - Try IOTAIDEThemingServices250 first (Delphi 10.3+), which has ApplyTheme.
-    - Fall back to IOTAIDEThemingServices if the versioned one is unavailable.
-    - After ApplyTheme, manually fix TLabel/TPanel colors using GetSystemColor,
-      because these controls don't use VCL style hooks.
-    - RegisterFormClass must be called once per form class before any instance
-      is created (done in CyAIAssistant.Register initialization).
-
-  IDEThemeIsDark
-    Returns True when the current IDE theme has a dark background.
-    Determined by computing the luminance of clWindow from StyleServices.
-    Luminance < 128  →  dark theme.
-
-  IDEThemeLinkColor / IDEThemeLinkHoverColor
-    Return link colors appropriate for the active theme:
-      Dark  theme → bright orange  #FF8C00 / bright blue  #6CB4FF
-      Light theme → dark  orange   #CC6600 / standard blue #0000CC
-}
+// CyAIAssistant.IDETheme.pas
+//
+// Applies the Delphi IDE's current VCL theme to plugin forms.
+//
+// Strategy:
+// - Try IOTAIDEThemingServices250 first (Delphi 10.3+), which has ApplyTheme.
+// - Fall back to IOTAIDEThemingServices if the versioned one is unavailable.
+// - After ApplyTheme, manually fix TLabel/TPanel colors using GetSystemColor,
+// because these controls don't use VCL style hooks.
+// - RegisterFormClass must be called once per form class before any instance
+// is created (done in CyAIAssistant.Register initialization).
+//
+// IDEThemeIsDark
+// Returns True when the current IDE theme has a dark background.
+// Determined by computing the luminance of clWindow from StyleServices.
+// Luminance < 128  →  dark theme.
+//
+// IDEThemeLinkColor / IDEThemeLinkHoverColor
+// Return link colors appropriate for the active theme:
+// Dark  theme → bright orange  #FF8C00 / bright blue  #6CB4FF
+// Light theme → dark  orange   #CC6600 / standard blue #0000CC
 
 interface
 
@@ -43,9 +41,9 @@ implementation
 uses
   Winapi.Windows;
 
-{ ---------------------------------------------------------------------------
-  Internal helpers
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 function GetThemeService(out ThemeSvc: IOTAIDEThemingServices): Boolean;
 begin
@@ -65,18 +63,19 @@ begin
   Result := Round(0.299 * R + 0.587 * G + 0.114 * B);
 end;
 
-{ ---------------------------------------------------------------------------
-  Public: theme detection
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Public: theme detection
+// ---------------------------------------------------------------------------
 
 function IDEThemeIsDark: Boolean;
 var
   ThemeSvc: IOTAIDEThemingServices;
-  BgColor : TColor;
-  Lum     : Byte;
+  BgColor: TColor;
+  Lum: Byte;
 begin
-  Result := False;   // assume light when IDE theming is unavailable
-  if not GetThemeService(ThemeSvc) then Exit;
+  Result := False; // assume light when IDE theming is unavailable
+  if not GetThemeService(ThemeSvc) then
+    Exit;
 
   // clWindow gives the editor/form background; clBtnFace gives the panel
   // background — both should agree on dark vs light.
@@ -88,37 +87,36 @@ begin
   if (BgColor and $FF000000) <> 0 then
     BgColor := ThemeSvc.StyleServices.GetSystemColor(clBtnFace);
 
-  Lum    := Luminance(ColorToRGB(BgColor));
+  Lum := Luminance(ColorToRGB(BgColor));
   Result := Lum < 128;
 end;
 
 function IDEThemeLinkColor: TColor;
 begin
   if IDEThemeIsDark then
-    Result := clRed//$0040B8FF   // amber  RGB(255,184,64)  — warm, visible on dark bg
+    Result := $0040B8FF // amber  RGB(255,184,64)  — warm, visible on dark bg
   else
-    Result := clGreen;//$000066CC;  // dark orange RGB(204,102,0) — visible on light bg
+    Result := $000066CC; // dark orange RGB(204,102,0) — visible on light bg
 end;
 
 function IDEThemeLinkHoverColor: TColor;
 begin
   if IDEThemeIsDark then
-    Result := $00FFFFFF   // bright white — unmistakably different from amber
+    Result := $00FFFFFF // bright white — unmistakably different from amber
   else
-    Result := $00CC0000;  // standard blue RGB(0,0,204)
+    Result := $00CC0000; // standard blue RGB(0,0,204)
 end;
 
-{ ---------------------------------------------------------------------------
-  Internal: fix label/panel colors after ApplyTheme
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Internal: fix label/panel colors after ApplyTheme
+// ---------------------------------------------------------------------------
 
-procedure FixControlColors(AParent: TWinControl;
-  const ThemeSvc: IOTAIDEThemingServices);
+procedure FixControlColors(AParent: TWinControl; const ThemeSvc: IOTAIDEThemingServices);
 var
-  I        : Integer;
-  Ctrl     : TControl;
-  BgColor  : TColor;
-  FgColor  : TColor;
+  I: Integer;
+  Ctrl: TControl;
+  BgColor: TColor;
+  FgColor: TColor;
 begin
   BgColor := ThemeSvc.StyleServices.GetSystemColor(clWindow);
   FgColor := ThemeSvc.StyleServices.GetSystemColor(clWindowText);
@@ -129,12 +127,12 @@ begin
 
     if Ctrl is TLabel then
     begin
-      TLabel(Ctrl).Color      := BgColor;
+      TLabel(Ctrl).Color := BgColor;
       TLabel(Ctrl).Font.Color := FgColor;
     end
     else if Ctrl is TPanel then
     begin
-      TPanel(Ctrl).Color      := BgColor;
+      TPanel(Ctrl).Color := BgColor;
       TPanel(Ctrl).Font.Color := FgColor;
     end;
 
@@ -143,9 +141,9 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Public: registration and application
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Public: registration and application
+// ---------------------------------------------------------------------------
 
 procedure RegisterIDEThemeForm(AFormClass: TCustomFormClass);
 var
@@ -157,8 +155,8 @@ end;
 
 procedure ApplyIDETheme(AForm: TCustomForm);
 var
-  ThemeSvc    : IOTAIDEThemingServices;
-  ThemeSvc250 : IOTAIDEThemingServices250;
+  ThemeSvc: IOTAIDEThemingServices;
+  ThemeSvc250: IOTAIDEThemingServices250;
 begin
   // Try the versioned interface first (Delphi 10.3+)
   if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then

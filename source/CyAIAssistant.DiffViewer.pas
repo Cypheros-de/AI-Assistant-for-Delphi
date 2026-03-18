@@ -1,10 +1,8 @@
 unit CyAIAssistant.DiffViewer;
 
-{
-  CyAIAssistant.DiffViewer.pas
-  Side-by-side diff viewer: original vs AI code, unified diff, editable AI tab.
-  Allows applying the AI result back into the IDE editor selection.
-}
+// CyAIAssistant.DiffViewer.pas
+// Side-by-side diff viewer: original vs AI code, unified diff, editable AI tab.
+// Allows applying the AI result back into the IDE editor selection.
 
 interface
 
@@ -18,52 +16,51 @@ type
   TDiffLineKind = (dlkSame, dlkAdded, dlkRemoved, dlkChanged);
 
   TDiffLine = record
-    Kind      : TDiffLineKind;
-    OrigLine  : string;
-    NewLine   : string;
+    Kind: TDiffLineKind;
+    OrigLine: string;
+    NewLine: string;
     OrigLineNo: Integer;
-    NewLineNo : Integer;
+    NewLineNo: Integer;
   end;
 
   TDiffViewerForm = class(TForm)
-    PanelTop      : TPanel;
-      LabelTitle  : TLabel;
-    PanelBottom   : TPanel;
-      LabelStats  : TLabel;
-      BtnApply    : TButton;
-      BtnCopyNew  : TButton;
-      BtnClose    : TButton;
-    PageControl   : TPageControl;
-      TabSideBySide: TTabSheet;
-        PanelOriginal: TPanel;
-          LabelOrig   : TLabel;
-          MemoOriginal: TMemo;
-        SplitterSide: TSplitter;
-        PanelNew    : TPanel;
-          LabelNew  : TLabel;
-          MemoNew   : TMemo;
-      TabDiff       : TTabSheet;
-        MemoDiff    : TRichEdit;
-      TabAIOnly     : TTabSheet;
-        MemoAIEdit  : TMemo;
+    PanelTop: TPanel;
+    LabelTitle: TLabel;
+    PanelBottom: TPanel;
+    LabelStats: TLabel;
+    BtnApply: TButton;
+    BtnCopyNew: TButton;
+    BtnClose: TButton;
+    PageControl: TPageControl;
+    TabSideBySide: TTabSheet;
+    PanelOriginal: TPanel;
+    LabelOrig: TLabel;
+    MemoOriginal: TMemo;
+    SplitterSide: TSplitter;
+    PanelNew: TPanel;
+    LabelNew: TLabel;
+    MemoNew: TMemo;
+    TabDiff: TTabSheet;
+    MemoDiff: TRichEdit;
+    TabAIOnly: TTabSheet;
+    MemoAIEdit: TMemo;
     procedure BtnApplyClick(Sender: TObject);
     procedure BtnCopyClick(Sender: TObject);
     procedure BtnCloseClick(Sender: TObject);
   private
-    FOriginalCode : string;
-    FAICode       : string;
-    FSourceEditor : IOTASourceEditor;
-    FDiffLines    : TList<TDiffLine>;
-    FApplied      : Boolean;
+    FOriginalCode: string;
+    FAICode: string;
+    FSourceEditor: IOTASourceEditor;
+    FDiffLines: TList<TDiffLine>;
+    FApplied: Boolean;
     procedure ComputeDiff;
     procedure RenderSideBySide;
     procedure RenderUnifiedDiff;
     procedure UpdateStats;
     procedure ApplyToEditor(const AText: string);
-    function  LCS(const A, B: TArray<string>): TArray<string>;
+    function LCS(const A, B: TArray<string>): TArray<string>;
   public
-    constructor Create(AOwner: TComponent; const AOriginal, AAIResult: string;
-      ASourceEditor: IOTASourceEditor); reintroduce;
+    constructor Create(AOwner: TComponent; const AOriginal, AAIResult: string; ASourceEditor: IOTASourceEditor); reintroduce;
     destructor Destroy; override;
     property Applied: Boolean read FApplied;
   end;
@@ -77,37 +74,37 @@ uses
   CyAIAssistant.IDETheme;
 
 const
-  COLOR_ADDED   = $00C8FFC8;
+  COLOR_ADDED = $00C8FFC8;
   COLOR_REMOVED = $00C8C8FF;
   COLOR_CHANGED = $00FFFFC8;
 
-{ TDiffViewerForm }
+  // TDiffViewerForm
 
-constructor TDiffViewerForm.Create(AOwner: TComponent; const AOriginal, AAIResult: string;
-  ASourceEditor: IOTASourceEditor);
+constructor TDiffViewerForm.Create(AOwner: TComponent; const AOriginal, AAIResult: string; ASourceEditor: IOTASourceEditor);
 
   function NormalizeEOL(const S: string): string;
   var
-    I : Integer;
+    i: Integer;
     SB: TStringBuilder;
-    C : Char;
+    c: Char;
   begin
     SB := TStringBuilder.Create(Length(S) + 64);
     try
-      I := 1;
-      while I <= Length(S) do
+      i := 1;
+      while i <= Length(S) do
       begin
-        C := S[I];
-        if C = #13 then
+        c := S[i];
+        if c = #13 then
         begin
           SB.Append(#13#10);
-          if (I < Length(S)) and (S[I + 1] = #10) then Inc(I);
+          if (i < Length(S)) and (S[i + 1] = #10) then
+            Inc(i);
         end
-        else if C = #10 then
+        else if c = #10 then
           SB.Append(#13#10)
         else
-          SB.Append(C);
-        Inc(I);
+          SB.Append(c);
+        Inc(i);
       end;
       Result := SB.ToString;
     finally
@@ -118,13 +115,13 @@ constructor TDiffViewerForm.Create(AOwner: TComponent; const AOriginal, AAIResul
 begin
   inherited Create(AOwner);
   FOriginalCode := NormalizeEOL(AOriginal);
-  FAICode       := NormalizeEOL(AAIResult);
+  FAICode := NormalizeEOL(AAIResult);
   FSourceEditor := ASourceEditor;
-  FDiffLines    := TList<TDiffLine>.Create;
+  FDiffLines := TList<TDiffLine>.Create;
 
   MemoOriginal.Text := FOriginalCode;
-  MemoNew.Text      := FAICode;
-  MemoAIEdit.Text   := FAICode;
+  MemoNew.Text := FAICode;
+  MemoAIEdit.Text := FAICode;
 
   ComputeDiff;
   RenderSideBySide;
@@ -142,30 +139,36 @@ end;
 
 function TDiffViewerForm.LCS(const A, B: TArray<string>): TArray<string>;
 var
-  M, N, I, J : Integer;
-  Dp         : array of array of Integer;
-  Result2    : TList<string>;
+  m, n, i, j: Integer;
+  Dp: array of array of Integer;
+  Result2: TList<string>;
 begin
-  M := Length(A);
-  N := Length(B);
-  SetLength(Dp, M + 1, N + 1);
-  for I := 1 to M do
-    for J := 1 to N do
-      if A[I-1] = B[J-1] then Dp[I][J] := Dp[I-1][J-1] + 1
-      else Dp[I][J] := Max(Dp[I-1][J], Dp[I][J-1]);
+  m := Length(A);
+  n := Length(B);
+  SetLength(Dp, m + 1, n + 1);
+  for i := 1 to m do
+    for j := 1 to n do
+      if A[i - 1] = B[j - 1] then
+        Dp[i][j] := Dp[i - 1][j - 1] + 1
+      else
+        Dp[i][j] := Max(Dp[i - 1][j], Dp[i][j - 1]);
 
   Result2 := TList<string>.Create;
   try
-    I := M; J := N;
-    while (I > 0) and (J > 0) do
+    i := m;
+    j := n;
+    while (i > 0) and (j > 0) do
     begin
-      if A[I-1] = B[J-1] then
+      if A[i - 1] = B[j - 1] then
       begin
-        Result2.Insert(0, A[I-1]);
-        Dec(I); Dec(J);
+        Result2.Insert(0, A[i - 1]);
+        Dec(i);
+        Dec(j);
       end
-      else if Dp[I-1][J] > Dp[I][J-1] then Dec(I)
-      else Dec(J);
+      else if Dp[i - 1][j] > Dp[i][j - 1] then
+        Dec(i)
+      else
+        Dec(j);
     end;
     Result := Result2.ToArray;
   finally
@@ -176,34 +179,43 @@ end;
 procedure TDiffViewerForm.ComputeDiff;
 var
   OrigLines, NewLines, Common: TArray<string>;
-  OI, NI, CI : Integer;
-  DL         : TDiffLine;
-  MaxLen, I  : Integer;
+  OI, NI, CI: Integer;
+  DL: TDiffLine;
+  MaxLen, i: Integer;
+  OMatch: Boolean;
+  NMatch: Boolean;
 begin
   FDiffLines.Clear;
   OrigLines := FOriginalCode.Split([#13#10]);
-  NewLines  := FAICode.Split([#13#10]);
+  NewLines := FAICode.Split([#13#10]);
 
   if (Length(OrigLines) + Length(NewLines)) > 2000 then
   begin
     MaxLen := Max(Length(OrigLines), Length(NewLines));
-    for I := 0 to MaxLen - 1 do
+    for i := 0 to MaxLen - 1 do
     begin
-      DL.OrigLineNo := I + 1;
-      DL.NewLineNo  := I + 1;
-      if (I < Length(OrigLines)) and (I < Length(NewLines)) then
+      DL.OrigLineNo := i + 1;
+      DL.NewLineNo := i + 1;
+      if (i < Length(OrigLines)) and (i < Length(NewLines)) then
       begin
-        DL.OrigLine := OrigLines[I];
-        DL.NewLine  := NewLines[I];
-        if OrigLines[I] = NewLines[I] then DL.Kind := dlkSame else DL.Kind := dlkChanged;
+        DL.OrigLine := OrigLines[i];
+        DL.NewLine := NewLines[i];
+        if OrigLines[i] = NewLines[i] then
+          DL.Kind := dlkSame
+        else
+          DL.Kind := dlkChanged;
       end
-      else if I < Length(OrigLines) then
+      else if i < Length(OrigLines) then
       begin
-        DL.OrigLine := OrigLines[I]; DL.NewLine := ''; DL.Kind := dlkRemoved;
+        DL.OrigLine := OrigLines[i];
+        DL.NewLine := '';
+        DL.Kind := dlkRemoved;
       end
       else
       begin
-        DL.OrigLine := ''; DL.NewLine := NewLines[I]; DL.Kind := dlkAdded;
+        DL.OrigLine := '';
+        DL.NewLine := NewLines[i];
+        DL.Kind := dlkAdded;
       end;
       FDiffLines.Add(DL);
     end;
@@ -211,57 +223,95 @@ begin
   end;
 
   Common := LCS(OrigLines, NewLines);
-  OI := 0; NI := 0; CI := 0;
+  OI := 0;
+  NI := 0;
+  CI := 0;
 
   while (OI < Length(OrigLines)) or (NI < Length(NewLines)) do
   begin
-    var OMatch := (CI < Length(Common)) and (OI < Length(OrigLines)) and (OrigLines[OI] = Common[CI]);
-    var NMatch := (CI < Length(Common)) and (NI < Length(NewLines)) and (NewLines[NI] = Common[CI]);
+    OMatch := (CI < Length(Common)) and (OI < Length(OrigLines)) and (OrigLines[OI] = Common[CI]);
+    NMatch := (CI < Length(Common)) and (NI < Length(NewLines)) and (NewLines[NI] = Common[CI]);
 
     if OMatch and NMatch then
     begin
-      DL.Kind := dlkSame; DL.OrigLine := OrigLines[OI]; DL.NewLine := NewLines[NI];
-      DL.OrigLineNo := OI + 1; DL.NewLineNo := NI + 1;
-      FDiffLines.Add(DL); Inc(OI); Inc(NI); Inc(CI);
+      DL.Kind := dlkSame;
+      DL.OrigLine := OrigLines[OI];
+      DL.NewLine := NewLines[NI];
+      DL.OrigLineNo := OI + 1;
+      DL.NewLineNo := NI + 1;
+      FDiffLines.Add(DL);
+      Inc(OI);
+      Inc(NI);
+      Inc(CI);
     end
     else if not OMatch and (OI < Length(OrigLines)) and not NMatch and (NI < Length(NewLines)) then
     begin
-      DL.Kind := dlkChanged; DL.OrigLine := OrigLines[OI]; DL.NewLine := NewLines[NI];
-      DL.OrigLineNo := OI + 1; DL.NewLineNo := NI + 1;
-      FDiffLines.Add(DL); Inc(OI); Inc(NI);
+      DL.Kind := dlkChanged;
+      DL.OrigLine := OrigLines[OI];
+      DL.NewLine := NewLines[NI];
+      DL.OrigLineNo := OI + 1;
+      DL.NewLineNo := NI + 1;
+      FDiffLines.Add(DL);
+      Inc(OI);
+      Inc(NI);
     end
     else if not OMatch and (OI < Length(OrigLines)) then
     begin
-      DL.Kind := dlkRemoved; DL.OrigLine := OrigLines[OI]; DL.NewLine := '';
-      DL.OrigLineNo := OI + 1; DL.NewLineNo := 0;
-      FDiffLines.Add(DL); Inc(OI);
+      DL.Kind := dlkRemoved;
+      DL.OrigLine := OrigLines[OI];
+      DL.NewLine := '';
+      DL.OrigLineNo := OI + 1;
+      DL.NewLineNo := 0;
+      FDiffLines.Add(DL);
+      Inc(OI);
     end
     else if not NMatch and (NI < Length(NewLines)) then
     begin
-      DL.Kind := dlkAdded; DL.OrigLine := ''; DL.NewLine := NewLines[NI];
-      DL.OrigLineNo := 0; DL.NewLineNo := NI + 1;
-      FDiffLines.Add(DL); Inc(NI);
+      DL.Kind := dlkAdded;
+      DL.OrigLine := '';
+      DL.NewLine := NewLines[NI];
+      DL.OrigLineNo := 0;
+      DL.NewLineNo := NI + 1;
+      FDiffLines.Add(DL);
+      Inc(NI);
     end
-    else Break;
+    else
+      Break;
   end;
 end;
 
 procedure TDiffViewerForm.RenderSideBySide;
 var
-  DL       : TDiffLine;
+  DL: TDiffLine;
   OrigLines: TStringList;
-  NewLines : TStringList;
+  NewLines: TStringList;
 begin
   OrigLines := TStringList.Create;
-  NewLines  := TStringList.Create;
+  NewLines := TStringList.Create;
   try
     for DL in FDiffLines do
     begin
       case DL.Kind of
-        dlkSame:    begin OrigLines.Add(DL.OrigLine);         NewLines.Add(DL.NewLine); end;
-        dlkAdded:   begin OrigLines.Add('');                  NewLines.Add('+ ' + DL.NewLine); end;
-        dlkRemoved: begin OrigLines.Add('- ' + DL.OrigLine);  NewLines.Add(''); end;
-        dlkChanged: begin OrigLines.Add('~ ' + DL.OrigLine);  NewLines.Add('~ ' + DL.NewLine); end;
+        dlkSame:
+          begin
+            OrigLines.Add(DL.OrigLine);
+            NewLines.Add(DL.NewLine);
+          end;
+        dlkAdded:
+          begin
+            OrigLines.Add('');
+            NewLines.Add('+ ' + DL.NewLine);
+          end;
+        dlkRemoved:
+          begin
+            OrigLines.Add('- ' + DL.OrigLine);
+            NewLines.Add('');
+          end;
+        dlkChanged:
+          begin
+            OrigLines.Add('~ ' + DL.OrigLine);
+            NewLines.Add('~ ' + DL.NewLine);
+          end;
       end;
     end;
     MemoOriginal.Lines.BeginUpdate;
@@ -281,9 +331,9 @@ end;
 
 procedure TDiffViewerForm.RenderUnifiedDiff;
 var
-  DL      : TDiffLine;
+  DL: TDiffLine;
   LineText: string;
-  FgColor : TColor;
+  FgColor: TColor;
   StartPos: Integer;
 begin
   MemoDiff.Lines.BeginUpdate;
@@ -293,15 +343,33 @@ begin
   for DL in FDiffLines do
   begin
     case DL.Kind of
-      dlkSame:    begin LineText := '   ' + DL.OrigLine; FgColor := $00777777; end;
-      dlkAdded:   begin LineText := '+  ' + DL.NewLine;  FgColor := $0055FF55; end;
-      dlkRemoved: begin LineText := '-  ' + DL.OrigLine; FgColor := $00FF5555; end;
-      dlkChanged: begin LineText := '~  ' + DL.OrigLine + '  ->  ' + DL.NewLine; FgColor := $00FFFF55; end;
+      dlkSame:
+        begin
+          LineText := '   ' + DL.OrigLine;
+          FgColor := $00777777;
+        end;
+      dlkAdded:
+        begin
+          LineText := '+  ' + DL.NewLine;
+          FgColor := $0055FF55;
+        end;
+      dlkRemoved:
+        begin
+          LineText := '-  ' + DL.OrigLine;
+          FgColor := $00FF5555;
+        end;
+      dlkChanged:
+        begin
+          LineText := '~  ' + DL.OrigLine + '  ->  ' + DL.NewLine;
+          FgColor := $00FFFF55;
+        end;
     else
-      LineText := DL.OrigLine; FgColor := $00AAAAAA;
+      LineText := DL.OrigLine;
+      FgColor := $00AAAAAA;
     end;
     StartPos := Length(MemoDiff.Text);
-    MemoDiff.SelStart := StartPos; MemoDiff.SelLength := 0;
+    MemoDiff.SelStart := StartPos;
+    MemoDiff.SelLength := 0;
     MemoDiff.SelAttributes.Color := FgColor;
     MemoDiff.SelText := LineText + #13#10;
   end;
@@ -309,19 +377,25 @@ end;
 
 procedure TDiffViewerForm.UpdateStats;
 var
-  DL                            : TDiffLine;
-  Added, Removed, Changed, Same : Integer;
+  DL: TDiffLine;
+  Added, Removed, Changed, Same: Integer;
 begin
-  Added := 0; Removed := 0; Changed := 0; Same := 0;
+  Added := 0;
+  Removed := 0;
+  Changed := 0;
+  Same := 0;
   for DL in FDiffLines do
     case DL.Kind of
-      dlkAdded:   Inc(Added);
-      dlkRemoved: Inc(Removed);
-      dlkChanged: Inc(Changed);
-      dlkSame:    Inc(Same);
+      dlkAdded:
+        Inc(Added);
+      dlkRemoved:
+        Inc(Removed);
+      dlkChanged:
+        Inc(Changed);
+      dlkSame:
+        Inc(Same);
     end;
-  LabelStats.Caption := Format(
-    'Diff: %d unchanged  |  +%d added  |  -%d removed  |  ~%d changed  |  Total lines: %d',
+  LabelStats.Caption := Format('Diff: %d unchanged  |  +%d added  |  -%d removed  |  ~%d changed  |  Total lines: %d',
     [Same, Added, Removed, Changed, FDiffLines.Count]);
 end;
 
@@ -329,22 +403,23 @@ procedure TDiffViewerForm.ApplyToEditor(const AText: string);
 
   function LeadingWhitespace(const S: string): string;
   var
-    SL  : TStringList;
-    I, J: Integer;
+    SL: TStringList;
+    i, j: Integer;
     Line: string;
   begin
     Result := '';
     SL := TStringList.Create;
     try
       SL.Text := S;
-      for I := 0 to SL.Count - 1 do
+      for i := 0 to SL.Count - 1 do
       begin
-        Line := SL[I];
+        Line := SL[i];
         if Length(Trim(Line)) > 0 then
         begin
-          J := 1;
-          while (J <= Length(Line)) and ((Line[J] = ' ') or (Line[J] = #9)) do Inc(J);
-          Result := Copy(Line, 1, J - 1);
+          j := 1;
+          while (j <= Length(Line)) and ((Line[j] = ' ') or (Line[j] = #9)) do
+            Inc(j);
+          Result := Copy(Line, 1, j - 1);
           Exit;
         end;
       end;
@@ -355,50 +430,64 @@ procedure TDiffViewerForm.ApplyToEditor(const AText: string);
 
   function ReindentCode(const ACode, AiBase, ATargetBase: string): string;
   var
-    SL     : TStringList;
-    SB     : TStringBuilder;
-    I      : Integer;
-    Line   : string;
+    SL: TStringList;
+    SB: TStringBuilder;
+    i: Integer;
+    Line: string;
     BaseLen: Integer;
   begin
-    if AiBase = ATargetBase then begin Result := ACode; Exit; end;
+    if AiBase = ATargetBase then
+    begin
+      Result := ACode;
+      Exit;
+    end;
     BaseLen := Length(AiBase);
     SL := TStringList.Create;
     SB := TStringBuilder.Create;
     try
       SL.Text := ACode;
-      for I := 0 to SL.Count - 1 do
+      for i := 0 to SL.Count - 1 do
       begin
-        Line := SL[I];
+        Line := SL[i];
         if (BaseLen > 0) and (Copy(Line, 1, BaseLen) = AiBase) then
           Line := ATargetBase + Copy(Line, BaseLen + 1, MaxInt)
         else if Length(Trim(Line)) > 0 then
           Line := ATargetBase + TrimLeft(Line);
         SB.Append(Line);
-        if I < SL.Count - 1 then SB.Append(#13#10);
+        if i < SL.Count - 1 then
+          SB.Append(#13#10);
       end;
       Result := SB.ToString;
     finally
-      SL.Free; SB.Free;
+      SL.Free;
+      SB.Free;
     end;
   end;
 
 var
-  EditView   : IOTAEditView;
-  StartChar  : TOTACharPos;
-  EndChar    : TOTACharPos;
-  StartOff   : LongInt;
-  EndOff     : LongInt;
-  Writer     : IOTAEditWriter;
-  InsertText : AnsiString;
-  Reindented : string;
+  EditView: IOTAEditView;
+  StartChar: TOTACharPos;
+  EndChar: TOTACharPos;
+  StartOff: LongInt;
+  EndOff: LongInt;
+  Writer: IOTAEditWriter;
+  InsertText: AnsiString;
+  Reindented: string;
 begin
-  if FSourceEditor = nil then begin ShowMessage('Cannot apply: source editor reference lost.'); Exit; end;
-  if FSourceEditor.EditViewCount = 0 then begin ShowMessage('Cannot apply: no active edit view.'); Exit; end;
+  if FSourceEditor = nil then
+  begin
+    ShowMessage('Cannot apply: source editor reference lost.');
+    Exit;
+  end;
+  if FSourceEditor.EditViewCount = 0 then
+  begin
+    ShowMessage('Cannot apply: no active edit view.');
+    Exit;
+  end;
 
-  EditView  := FSourceEditor.EditViews[0];
+  EditView := FSourceEditor.EditViews[0];
   StartChar := FSourceEditor.BlockStart;
-  EndChar   := FSourceEditor.BlockAfter;
+  EndChar := FSourceEditor.BlockAfter;
 
   if (StartChar.Line = 0) and (EndChar.Line = 0) then
   begin
@@ -406,12 +495,12 @@ begin
     Exit;
   end;
 
-  StartOff   := EditView.CharPosToPos(StartChar);
-  EndOff     := EditView.CharPosToPos(EndChar);
+  StartOff := EditView.CharPosToPos(StartChar);
+  EndOff := EditView.CharPosToPos(EndChar);
   Reindented := ReindentCode(AText, LeadingWhitespace(AText), LeadingWhitespace(FOriginalCode));
 
-  InsertText := AnsiString(StringReplace(Reindented,           #13#10, #10,   [rfReplaceAll]));
-  InsertText := AnsiString(StringReplace(string(InsertText),   #10,    #13#10, [rfReplaceAll]));
+  InsertText := AnsiString(StringReplace(Reindented, #13#10, #10, [rfReplaceAll]));
+  InsertText := AnsiString(StringReplace(string(InsertText), #10, #13#10, [rfReplaceAll]));
 
   Writer := FSourceEditor.CreateUndoableWriter;
   try
@@ -429,8 +518,7 @@ end;
 
 procedure TDiffViewerForm.BtnApplyClick(Sender: TObject);
 begin
-  if MessageDlg('Apply the AI-generated code to replace the selected text in the editor?',
-    mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+  if MessageDlg('Apply the AI-generated code to replace the selected text in the editor?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
     ApplyToEditor(MemoAIEdit.Text);
 end;
 

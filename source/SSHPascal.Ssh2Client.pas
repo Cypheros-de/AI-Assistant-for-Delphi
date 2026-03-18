@@ -1,15 +1,12 @@
 unit SSHPascal.Ssh2Client;
-{
-
-    Copyright (c) 2020 Kiriakos Vlahos (PyScripter)
-    Delphi wrapper of libssh2 (https://www.libssh2.org/)
-
-    The C header translation and the SFTP implementation draw from
-    https://bitbucket.org/ZeljkoMarjanovic/libssh2-delphi
-    Copyright (c) 2010, Zeljko Marjanovic (MPL 1.1)
-
-    Released under the MIT Licence
-}
+// Copyright (c) 2020 Kiriakos Vlahos (PyScripter)
+// Delphi wrapper of libssh2 (https://www.libssh2.org/)
+//
+// The C header translation and the SFTP implementation draw from
+// https://bitbucket.org/ZeljkoMarjanovic/libssh2-delphi
+// Copyright (c) 2010, Zeljko Marjanovic (MPL 1.1)
+//
+// Released under the MIT Licence
 
 interface
 uses

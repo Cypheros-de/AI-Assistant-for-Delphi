@@ -1,9 +1,7 @@
-unit CyAIAssistant.Wizard;
+﻿unit CyAIAssistant.Wizard;
 
-{
-  CyAIAssistant.Wizard.pas
-  Implements the IOTAWizard interface required for Delphi IDE plugin registration.
-}
+// CyAIAssistant.Wizard.pas
+// Implements the IOTAWizard interface required for Delphi IDE plugin registration.
 
 interface
 
@@ -35,7 +33,7 @@ type
 
 implementation
 
-{ TCyAIAssistantWizard }
+// TCyAIAssistantWizard
 
 constructor TCyAIAssistantWizard.Create;
 begin
@@ -54,10 +52,21 @@ begin
 end;
 
 // IOTANotifier — required stubs
-procedure TCyAIAssistantWizard.AfterSave;  begin end;
-procedure TCyAIAssistantWizard.BeforeSave; begin end;
-procedure TCyAIAssistantWizard.Destroyed;  begin end;
-procedure TCyAIAssistantWizard.Modified;   begin end;
+procedure TCyAIAssistantWizard.AfterSave;
+begin
+end;
+
+procedure TCyAIAssistantWizard.BeforeSave;
+begin
+end;
+
+procedure TCyAIAssistantWizard.Destroyed;
+begin
+end;
+
+procedure TCyAIAssistantWizard.Modified;
+begin
+end;
 
 procedure TCyAIAssistantWizard.Execute;
 begin

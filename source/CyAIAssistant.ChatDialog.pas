@@ -1,19 +1,17 @@
 unit CyAIAssistant.ChatDialog;
 
-{
-  CyAIAssistant.ChatDialog.pas
-
-  Multi-turn AI chat dialog with automatic detection of Delphi project files
-  embedded in the AI response and a save-to-disk facility.
-
-  File detection
-  --------------
-  The AI is instructed to wrap each file in a fenced block whose opening line
-  includes the filename, e.g.:  ```pascal MyUnit.pas
-  The parser also recognises bare "unit X;" / "program X;" declarations.
-
-  Detected file types: .pas .dpr .dpk .dfm .dproj .groupproj .ini .txt
-}
+// CyAIAssistant.ChatDialog.pas
+//
+// Multi-turn AI chat dialog with automatic detection of Delphi project files
+// embedded in the AI response and a save-to-disk facility.
+//
+// File detection
+// --------------
+// The AI is instructed to wrap each file in a fenced block whose opening line
+// includes the filename, e.g.:  ```pascal MyUnit.pas
+// The parser also recognises bare "unit X;" / "program X;" declarations.
+//
+// Detected file types: .pas .dpr .dpk .dfm .dproj .groupproj .ini .txt
 
 interface
 
@@ -28,43 +26,43 @@ uses
 type
   TDetectedFile = record
     FileName: string;
-    Content : string;
+    Content: string;
   end;
 
   TChatDialog = class(TForm)
-    PanelTop       : TPanel;
-      LabelTitle   : TLabel;
-      LabelProvider: TLabel;
-      LabelModel   : TLabel;
-      ComboProvider: TComboBox;
-      EditModel    : TEdit;
-      BtnNewChat   : TButton;
-    PanelMain      : TPanel;
-      PanelChat    : TPanel;
-        PageControl: TPageControl;
-          TabChat  : TTabSheet;
-            LabelInput    : TLabel;
-            MemoInput     : TMemo;
-            PanelChatBtns : TPanel;
-              LabelStatus : TLabel;
-              BtnSend     : TButton;
-              BtnStop     : TButton;
-              BtnClearInput: TButton;
-              ProgressBar : TProgressBar;
-          TabFiles : TTabSheet;
-            PanelFileLeft : TPanel;
-              LabelFiles  : TLabel;
-              ListFiles   : TListBox;
-            SplitterFiles : TSplitter;
-            MemoFilePreview: TMemo;
-            PanelFileBtns : TPanel;
-              BtnSaveSelected: TButton;
-              BtnSaveAll     : TButton;
-              BtnOpenInIDE   : TButton;
-      SplitterMain   : TSplitter;
-      PanelHistory   : TPanel;
-        LabelHistory : TLabel;
-        RichHistory  : TRichEdit;
+    PanelTop: TPanel;
+    LabelTitle: TLabel;
+    LabelProvider: TLabel;
+    LabelModel: TLabel;
+    ComboProvider: TComboBox;
+    EditModel: TEdit;
+    BtnNewChat: TButton;
+    PanelMain: TPanel;
+    PanelChat: TPanel;
+    PageControl: TPageControl;
+    TabChat: TTabSheet;
+    LabelInput: TLabel;
+    MemoInput: TMemo;
+    PanelChatBtns: TPanel;
+    LabelStatus: TLabel;
+    BtnSend: TButton;
+    BtnStop: TButton;
+    BtnClearInput: TButton;
+    ProgressBar: TProgressBar;
+    TabFiles: TTabSheet;
+    PanelFileLeft: TPanel;
+    LabelFiles: TLabel;
+    ListFiles: TListBox;
+    SplitterFiles: TSplitter;
+    MemoFilePreview: TMemo;
+    PanelFileBtns: TPanel;
+    BtnSaveSelected: TButton;
+    BtnSaveAll: TButton;
+    BtnOpenInIDE: TButton;
+    SplitterMain: TSplitter;
+    PanelHistory: TPanel;
+    LabelHistory: TLabel;
+    RichHistory: TRichEdit;
     procedure ComboProviderChange(Sender: TObject);
     procedure BtnNewChatClick(Sender: TObject);
     procedure BtnSendClick(Sender: TObject);
@@ -75,21 +73,20 @@ type
     procedure BtnSaveAllClick(Sender: TObject);
     procedure BtnOpenInIDEClick(Sender: TObject);
   private
-    FAIClient     : TAIClient;
-    FHistory      : TList<TChatMessage>;
+    FAIClient: TAIClient;
+    FHistory: TList<TChatMessage>;
     FDetectedFiles: TList<TDetectedFile>;
-    FBusy         : Boolean;
+    FBusy: Boolean;
     procedure SetBusy(ABusy: Boolean);
     procedure UpdateModelHint;
     procedure AppendHistory(const ARole, AText: string);
     procedure ParseFilesFromResponse(const AResponse: string);
     procedure RefreshFileList;
-    function  SaveFileWithDialog(const AFile: TDetectedFile;
-      const ADefaultDir: string): string;
+    function SaveFileWithDialog(const AFile: TDetectedFile; const ADefaultDir: string): string;
     procedure OpenFileInIDE(const APath: string);
   public
     constructor Create(AOwner: TComponent); reintroduce;
-    destructor  Destroy; override;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -106,8 +103,8 @@ uses
 constructor TChatDialog.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FAIClient      := TAIClient.Create;
-  FHistory       := TList<TChatMessage>.Create;
+  FAIClient := TAIClient.Create;
+  FHistory := TList<TChatMessage>.Create;
   FDetectedFiles := TList<TDetectedFile>.Create;
 
   ComboProvider.ItemIndex := Ord(GSettings.Provider);
@@ -127,11 +124,16 @@ end;
 procedure TChatDialog.UpdateModelHint;
 begin
   case GSettings.Provider of
-    apClaude:  EditModel.Text := GSettings.ClaudeModel;
-    apOpenAI:  EditModel.Text := GSettings.OpenAIModel;
-    apOllama:  EditModel.Text := GSettings.OllamaModel;
-    apGroq:    EditModel.Text := GSettings.GroqModel;
-    apMistral: EditModel.Text := GSettings.MistralModel;
+    apClaude:
+      EditModel.Text := GSettings.ClaudeModel;
+    apOpenAI:
+      EditModel.Text := GSettings.OpenAIModel;
+    apOllama:
+      EditModel.Text := GSettings.OllamaModel;
+    apGroq:
+      EditModel.Text := GSettings.GroqModel;
+    apMistral:
+      EditModel.Text := GSettings.MistralModel;
   end;
 end;
 
@@ -143,51 +145,54 @@ end;
 
 procedure TChatDialog.SetBusy(ABusy: Boolean);
 begin
-  FBusy               := ABusy;
-  BtnSend.Enabled     := not ABusy;
-  BtnStop.Enabled     := ABusy;
-  BtnNewChat.Enabled  := not ABusy;
+  FBusy := ABusy;
+  BtnSend.Enabled := not ABusy;
+  BtnStop.Enabled := ABusy;
+  BtnNewChat.Enabled := not ABusy;
   ProgressBar.Visible := ABusy;
-  if ABusy then ProgressBar.Style := pbstMarquee
-  else          ProgressBar.Style := pbstNormal;
+  if ABusy then
+    ProgressBar.Style := pbstMarquee
+  else
+    ProgressBar.Style := pbstNormal;
 end;
 
-{ ---------------------------------------------------------------------------
-  FormatAIText
-  Converts the raw AI response text into something readable:
-  - Converts markdown pipe-table rows (| col | col |) into indented lines
-  - Replaces || separators with line breaks
-  - Strips leading/trailing ** bold markers (rendered via font style instead)
-  - Collapses sequences of 3+ blank lines to a single blank line
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// FormatAIText
+// Converts the raw AI response text into something readable:
+// - Converts markdown pipe-table rows (| col | col |) into indented lines
+// - Replaces || separators with line breaks
+// - Strips leading/trailing ** bold markers (rendered via font style instead)
+// - Collapses sequences of 3+ blank lines to a single blank line
+// ---------------------------------------------------------------------------
 function FormatAIText(const AText: string): string;
 var
-  Lines  : TStringList;
-  Out    : TStringList;
-  I      : Integer;
-  Line   : string;
+  Lines: TStringList;
+  Out : TStringList;
+  i: Integer;
+  Line: string;
   Trimmed: string;
-  Parts  : TArray<string>;
-  Col    : string;
-  Row    : string;
-  Blanks : Integer;
+  Parts: TArray<string>;
+  Col: string;
+  Row: string;
+  Blanks: Integer;
+  c: String;
+  Expanded: String;
 begin
-  Lines  := TStringList.Create;
-  Out    := TStringList.Create;
+  Lines := TStringList.Create;
+  Out := TStringList.Create;
   try
     // First pass: split || into separate lines
-    var Expanded := AText.Replace(' || ', #13#10);
+    Expanded := AText.Replace(' || ', #13#10);
     Lines.Text := Expanded;
 
     Blanks := 0;
-    for I := 0 to Lines.Count - 1 do
+    for i := 0 to Lines.Count - 1 do
     begin
-      Line    := Lines[I];
+      Line := Lines[i];
       Trimmed := Trim(Line);
 
       // Markdown table separator rows (---|---) -- skip entirely
-      if (Trimmed <> '') and
-         (Trimmed.Replace('-','').Replace('|','').Replace('+','').Replace(' ','') = '') then
+      if (Trimmed <> '') and (Trimmed.Replace('-', '').Replace('|', '').Replace('+', '').Replace(' ', '') = '') then
         Continue;
 
       // Markdown table rows: | col | col | col |
@@ -197,9 +202,9 @@ begin
         Row := '';
         for Col in Parts do
         begin
-          var C := Trim(Col);
-          if C <> '' then
-            Row := Row + '  ' + C;
+          c := Trim(Col);
+          if c <> '' then
+            Row := Row + '  ' + c;
         end;
         if Trim(Row) <> '' then
         begin
@@ -213,7 +218,8 @@ begin
       if Trimmed = '' then
       begin
         Inc(Blanks);
-        if Blanks <= 1 then Out.Add('');
+        if Blanks <= 1 then
+          Out.Add('');
         Continue;
       end;
 
@@ -222,6 +228,7 @@ begin
     end;
 
     Result := Out.Text;
+
     // Trim a trailing blank line that TStringList.Text appends
     while Result.EndsWith(#13#10#13#10) do
       Result := Copy(Result, 1, Length(Result) - 2);
@@ -232,15 +239,14 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  RichAppend  --  append styled text to RichHistory without flicker
-  --------------------------------------------------------------------------- }
-procedure RichAppend(Rich: TRichEdit; const AText: string;
-  ABold: Boolean; AColor: TColor; AFontHeight: Integer = -12);
+// ---------------------------------------------------------------------------
+// RichAppend  --  append styled text to RichHistory without flicker
+// ---------------------------------------------------------------------------
+procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean; AColor: TColor; AFontHeight: Integer = -12);
 begin
-  Rich.SelStart  := MaxInt;
+  Rich.SelStart := MaxInt;
   Rich.SelLength := 0;
-  Rich.SelAttributes.Color  := AColor;
+  Rich.SelAttributes.Color := AColor;
   if ABold then
     Rich.SelAttributes.Style := [fsBold]
   else
@@ -251,12 +257,12 @@ end;
 
 procedure TChatDialog.AppendHistory(const ARole, AText: string);
 const
-  COLOR_YOU  = $00E8A020;  // amber -- [You] header
-  COLOR_AI   = $0040C080;  // teal -- [AI] header
+  COLOR_YOU = $00E8A020; // amber -- [You] header
+  COLOR_AI = $0040C080; // teal -- [AI] header
   COLOR_TEXT = clWindowText;
 var
   HeaderColor: TColor;
-  Formatted  : string;
+  Formatted: string;
 begin
   RichHistory.Lines.BeginUpdate;
   try
@@ -282,36 +288,40 @@ begin
   SendMessage(RichHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);
 end;
 
-{ ---------------------------------------------------------------------------
-  Send
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Send
+// ---------------------------------------------------------------------------
 
 procedure TChatDialog.BtnSendClick(Sender: TObject);
 var
   UserText: string;
-  Msg     : TChatMessage;
-  History : TArray<TChatMessage>;
-  I       : Integer;
+  Msg: TChatMessage;
+  History: TArray<TChatMessage>;
+  i: Integer;
 begin
-  if FBusy then Exit;
+  if FBusy then
+    Exit;
   UserText := Trim(MemoInput.Text);
-  if UserText = '' then Exit;
+  if UserText = '' then
+    Exit;
 
-  Msg.Role    := crUser;
+  Msg.Role := crUser;
   Msg.Content := UserText;
   FHistory.Add(Msg);
   AppendHistory('You', UserText);
   MemoInput.Clear;
 
   SetLength(History, FHistory.Count);
-  for I := 0 to FHistory.Count - 1 do
-    History[I] := FHistory[I];
+  for i := 0 to FHistory.Count - 1 do
+    History[i] := FHistory[i];
 
   SetBusy(True);
   LabelStatus.Caption := 'Thinking...';
 
   FAIClient.SendChatAsync(History,
     procedure(const AResult, AError: string)
+    var
+      AssistantMsg: TChatMessage;
     begin
       SetBusy(False);
       LabelStatus.Caption := '';
@@ -322,8 +332,7 @@ begin
         Exit;
       end;
 
-      var AssistantMsg: TChatMessage;
-      AssistantMsg.Role    := crAssistant;
+      AssistantMsg.Role := crAssistant;
       AssistantMsg.Content := AResult;
       FHistory.Add(AssistantMsg);
 
@@ -333,7 +342,7 @@ begin
       RefreshFileList;
       if FDetectedFiles.Count > 0 then
       begin
-        TabFiles.TabVisible    := True;
+        TabFiles.TabVisible := True;
         PageControl.ActivePage := TabFiles;
       end;
     end);
@@ -354,56 +363,58 @@ end;
 
 procedure TChatDialog.BtnNewChatClick(Sender: TObject);
 begin
-  if FBusy then Exit;
-  if (FHistory.Count > 0) and
-     (MessageDlg('Start a new chat? The current conversation will be cleared.',
-       mtConfirmation, [mbYes, mbNo], 0) <> mrYes) then
+  if FBusy then
+    Exit;
+  if (FHistory.Count > 0) and (MessageDlg('Start a new chat? The current conversation will be cleared.', mtConfirmation, [mbYes, mbNo], 0) <> mrYes) then
     Exit;
   FHistory.Clear;
   FDetectedFiles.Clear;
   RichHistory.Clear;
   ListFiles.Clear;
   MemoFilePreview.Clear;
-  TabFiles.TabVisible    := False;
+  TabFiles.TabVisible := False;
   PageControl.ActivePage := TabChat;
 end;
 
-{ ---------------------------------------------------------------------------
-  File detection
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// File detection
+// ---------------------------------------------------------------------------
 
 procedure TChatDialog.ParseFilesFromResponse(const AResponse: string);
 const
-  KNOWN_EXTS: array[0..7] of string = (
-    '.pas', '.dpr', '.dpk', '.dfm', '.dproj', '.groupproj', '.ini', '.txt');
+  KNOWN_EXTS: array [0 .. 7] of string = ('.pas', '.dpr', '.dpk', '.dfm', '.dproj', '.groupproj', '.ini', '.txt');
 var
-  Lines      : TStringList;
-  I, J       : Integer;
-  Line       : string;
-  InFence    : Boolean;
-  FenceFile  : string;
-  ContentSB  : TStringBuilder;
-  DF         : TDetectedFile;
-  FenceLine  : string;
-  Parts      : TArray<string>;
-  CandExt    : string;
-  ValidExt   : Boolean;
+  Lines: TStringList;
+  i, J: Integer;
+  Line: string;
+  InFence: Boolean;
+  FenceFile: string;
+  ContentSB: TStringBuilder;
+  DF: TDetectedFile;
+  FenceLine: string;
+  Parts: TArray<string>;
+  CandExt: string;
+  ValidExt: Boolean;
+  Content: string;
 
   function GuessNameFromContent(const AContent: string): string;
   var
     M: TMatch;
+    Kind: string;
+    Name: string;
   begin
     Result := '';
-    M := TRegEx.Match(AContent,
-      '^\s*(unit|program|package)\s+([A-Za-z0-9_.]+)\s*;',
-      [roIgnoreCase, roMultiLine]);
+    M := TRegEx.Match(AContent, '^\s*(unit|program|package)\s+([A-Za-z0-9_.]+)\s*;', [roIgnoreCase, roMultiLine]);
     if M.Success then
     begin
-      var Kind := LowerCase(M.Groups[1].Value);
-      var Name := M.Groups[2].Value;
-      if Kind = 'program' then Result := Name + '.dpr'
-      else if Kind = 'package' then Result := Name + '.dpk'
-      else Result := Name + '.pas';
+      Kind := LowerCase(M.Groups[1].Value);
+      Name := M.Groups[2].Value;
+      if Kind = 'program' then
+        Result := Name + '.dpr'
+      else if Kind = 'package' then
+        Result := Name + '.dpk'
+      else
+        Result := Name + '.pas';
     end;
   end;
 
@@ -411,28 +422,36 @@ begin
   Lines := TStringList.Create;
   try
     Lines.Text := AResponse;
-    InFence    := False;
-    FenceFile  := '';
-    ContentSB  := TStringBuilder.Create;
+    InFence := False;
+    FenceFile := '';
+    ContentSB := TStringBuilder.Create;
     try
-      for I := 0 to Lines.Count - 1 do
+      for i := 0 to Lines.Count - 1 do
       begin
-        Line := Lines[I];
+        Line := Lines[i];
 
         if not InFence then
         begin
           if (Length(Trim(Line)) >= 3) and (Copy(Trim(Line), 1, 3) = '```') then
           begin
             FenceLine := Trim(Copy(Trim(Line), 4, MaxInt));
-            Parts     := FenceLine.Split([' ', #9], TStringSplitOptions.ExcludeEmpty);
+            Parts := FenceLine.Split([' ', #9], TStringSplitOptions.ExcludeEmpty);
             FenceFile := '';
             for J := 0 to High(Parts) do
             begin
-              CandExt  := LowerCase(TPath.GetExtension(Parts[J]));
+              CandExt := LowerCase(TPath.GetExtension(Parts[J]));
               ValidExt := False;
               for var Ext in KNOWN_EXTS do
-                if CandExt = Ext then begin ValidExt := True; Break; end;
-              if ValidExt then begin FenceFile := Parts[J]; Break; end;
+                if CandExt = Ext then
+                begin
+                  ValidExt := True;
+                  Break;
+                end;
+              if ValidExt then
+              begin
+                FenceFile := Parts[J];
+                Break;
+              end;
             end;
             InFence := True;
             ContentSB.Clear;
@@ -442,23 +461,25 @@ begin
         begin
           if Trim(Line) = '```' then
           begin
-            var Content := ContentSB.ToString;
+            Content := ContentSB.ToString;
             if Trim(Content) <> '' then
             begin
-              if FenceFile = '' then FenceFile := GuessNameFromContent(Content);
+              if FenceFile = '' then
+                FenceFile := GuessNameFromContent(Content);
               if FenceFile <> '' then
               begin
                 DF.FileName := FenceFile;
-                DF.Content  := Content;
+                DF.Content := Content;
                 FDetectedFiles.Add(DF);
               end;
             end;
-            InFence   := False;
+            InFence := False;
             FenceFile := '';
           end
           else
           begin
-            if ContentSB.Length > 0 then ContentSB.AppendLine;
+            if ContentSB.Length > 0 then
+              ContentSB.AppendLine;
             ContentSB.Append(Line);
           end;
         end;
@@ -473,12 +494,12 @@ end;
 
 procedure TChatDialog.RefreshFileList;
 var
-  I, SelIdx: Integer;
+  i, SelIdx: Integer;
 begin
   SelIdx := ListFiles.ItemIndex;
   ListFiles.Clear;
-  for I := 0 to FDetectedFiles.Count - 1 do
-    ListFiles.Items.Add(FDetectedFiles[I].FileName);
+  for i := 0 to FDetectedFiles.Count - 1 do
+    ListFiles.Items.Add(FDetectedFiles[i].FileName);
   if (SelIdx >= 0) and (SelIdx < ListFiles.Count) then
     ListFiles.ItemIndex := SelIdx;
 end;
@@ -488,32 +509,31 @@ var
   Idx: Integer;
 begin
   Idx := ListFiles.ItemIndex;
-  if (Idx < 0) or (Idx >= FDetectedFiles.Count) then begin MemoFilePreview.Clear; Exit; end;
+  if (Idx < 0) or (Idx >= FDetectedFiles.Count) then
+  begin
+    MemoFilePreview.Clear;
+    Exit;
+  end;
   MemoFilePreview.Text := FDetectedFiles[Idx].Content;
 end;
 
-{ ---------------------------------------------------------------------------
-  Save / Open in IDE
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Save / Open in IDE
+// ---------------------------------------------------------------------------
 
-function TChatDialog.SaveFileWithDialog(const AFile: TDetectedFile;
-  const ADefaultDir: string): string;
+function TChatDialog.SaveFileWithDialog(const AFile: TDetectedFile; const ADefaultDir: string): string;
 var
   Dlg: TSaveDialog;
 begin
   Result := '';
   Dlg := TSaveDialog.Create(nil);
   try
-    Dlg.Title    := 'Save ' + AFile.FileName;
+    Dlg.Title := 'Save ' + AFile.FileName;
     Dlg.FileName := AFile.FileName;
-    if ADefaultDir <> '' then Dlg.InitialDir := ADefaultDir;
-    Dlg.Filter :=
-      'Pascal Files (*.pas)|*.pas|' +
-      'Delphi Project (*.dpr)|*.dpr|' +
-      'Package (*.dpk)|*.dpk|' +
-      'Form File (*.dfm)|*.dfm|' +
-      'Project File (*.dproj)|*.dproj|' +
-      'All Files (*.*)|*.*';
+    if ADefaultDir <> '' then
+      Dlg.InitialDir := ADefaultDir;
+    Dlg.Filter := 'Pascal Files (*.pas)|*.pas|' + 'Delphi Project (*.dpr)|*.dpr|' + 'Package (*.dpk)|*.dpk|' + 'Form File (*.dfm)|*.dfm|' +
+      'Project File (*.dproj)|*.dproj|' + 'All Files (*.*)|*.*';
     if Dlg.Execute then
     begin
       TFile.WriteAllText(Dlg.FileName, AFile.Content, TEncoding.UTF8);
@@ -526,7 +546,7 @@ end;
 
 procedure TChatDialog.BtnSaveSelectedClick(Sender: TObject);
 var
-  Idx : Integer;
+  Idx: Integer;
   Path: string;
 begin
   Idx := ListFiles.ItemIndex;
@@ -536,45 +556,50 @@ begin
     Exit;
   end;
   Path := SaveFileWithDialog(FDetectedFiles[Idx], '');
-  if Path <> '' then ShowMessage('Saved: ' + Path);
+  if Path <> '' then
+    ShowMessage('Saved: ' + Path);
 end;
 
 procedure TChatDialog.BtnSaveAllClick(Sender: TObject);
 var
   DirDlg: TFileOpenDialog;
-  Dir   : string;
-  I, Saved: Integer;
-  Path  : string;
+  Dir: string;
+  i, Saved: Integer;
+  Path: string;
 begin
-  if FDetectedFiles.Count = 0 then begin ShowMessage('No files detected yet.'); Exit; end;
+  if FDetectedFiles.Count = 0 then
+  begin
+    ShowMessage('No files detected yet.');
+    Exit;
+  end;
 
   DirDlg := TFileOpenDialog.Create(nil);
   try
-    DirDlg.Title   := 'Choose folder to save all files';
+    DirDlg.Title := 'Choose folder to save all files';
     DirDlg.Options := [fdoPickFolders];
-    if not DirDlg.Execute then Exit;
+    if not DirDlg.Execute then
+      Exit;
     Dir := DirDlg.FileName;
   finally
     DirDlg.Free;
   end;
 
   Saved := 0;
-  for I := 0 to FDetectedFiles.Count - 1 do
+  for i := 0 to FDetectedFiles.Count - 1 do
   begin
-    Path := TPath.Combine(Dir, FDetectedFiles[I].FileName);
+    Path := TPath.Combine(Dir, FDetectedFiles[i].FileName);
     if TFile.Exists(Path) then
-      if MessageDlg('Overwrite existing file?' + sLineBreak + Path,
-           mtConfirmation, [mbYes, mbNo], 0) <> mrYes then Continue;
-    TFile.WriteAllText(Path, FDetectedFiles[I].Content, TEncoding.UTF8);
+      if MessageDlg('Overwrite existing file?' + sLineBreak + Path, mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+        Continue;
+    TFile.WriteAllText(Path, FDetectedFiles[i].Content, TEncoding.UTF8);
     Inc(Saved);
   end;
-  ShowMessage(Format('%d of %d file(s) saved to:' + sLineBreak + Dir,
-    [Saved, FDetectedFiles.Count]));
+  ShowMessage(Format('%d of %d file(s) saved to:' + sLineBreak + Dir, [Saved, FDetectedFiles.Count]));
 end;
 
 procedure TChatDialog.BtnOpenInIDEClick(Sender: TObject);
 var
-  Idx : Integer;
+  Idx: Integer;
   Path: string;
 begin
   Idx := ListFiles.ItemIndex;
@@ -584,7 +609,8 @@ begin
     Exit;
   end;
   Path := SaveFileWithDialog(FDetectedFiles[Idx], '');
-  if Path = '' then Exit;
+  if Path = '' then
+    Exit;
   OpenFileInIDE(Path);
 end;
 

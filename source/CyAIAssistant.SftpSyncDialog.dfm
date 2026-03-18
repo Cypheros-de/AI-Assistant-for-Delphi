@@ -2,7 +2,7 @@ object SftpSyncDialog: TSftpSyncDialog
   Left = 0
   Top = 0
   Caption = 'SFTP Sync Settings'
-  ClientHeight = 493
+  ClientHeight = 519
   ClientWidth = 650
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -73,7 +73,7 @@ object SftpSyncDialog: TSftpSyncDialog
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 451
+    Top = 477
     Width = 650
     Height = 42
     Margins.Left = 5
@@ -88,7 +88,7 @@ object SftpSyncDialog: TSftpSyncDialog
       42)
     object BtnStartStop: TButton
       Left = 10
-      Top = 7
+      Top = 6
       Width = 110
       Height = 28
       Margins.Left = 5
@@ -105,45 +105,32 @@ object SftpSyncDialog: TSftpSyncDialog
       TabOrder = 0
       OnClick = BtnStartStopClick
     end
-    object BtnTestConnection: TButton
-      Left = 130
-      Top = 7
+    object BtnPushAll: TButton
+      Left = 174
+      Top = 6
       Width = 120
       Height = 28
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      Caption = 'Test Connection'
-      TabOrder = 1
-      OnClick = BtnTestConnectionClick
-    end
-    object BtnPushAll: TButton
-      Left = 258
-      Top = 7
-      Width = 90
-      Height = 28
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
-      Caption = 'Push All'
+      Caption = 'Push all to remote'
       Enabled = False
-      TabOrder = 3
+      TabOrder = 2
       OnClick = BtnPushAllClick
     end
     object BtnPullAll: TButton
-      Left = 356
-      Top = 7
-      Width = 90
+      Left = 304
+      Top = 6
+      Width = 120
       Height = 28
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      Caption = 'Pull All'
+      Caption = 'Pull all from remote'
       Enabled = False
-      TabOrder = 4
+      TabOrder = 3
       OnClick = BtnPullAllClick
     end
     object BtnClose: TButton
@@ -157,7 +144,7 @@ object SftpSyncDialog: TSftpSyncDialog
       Margins.Bottom = 5
       Anchors = [akTop, akRight]
       Caption = 'Close'
-      TabOrder = 2
+      TabOrder = 1
       OnClick = BtnCloseClick
     end
   end
@@ -165,7 +152,7 @@ object SftpSyncDialog: TSftpSyncDialog
     Left = 0
     Top = 52
     Width = 650
-    Height = 373
+    Height = 425
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -225,7 +212,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object LabelKeyPath: TLabel
         Left = 14
-        Top = 172
+        Top = 189
         Width = 116
         Height = 15
         Margins.Left = 5
@@ -235,8 +222,8 @@ object SftpSyncDialog: TSftpSyncDialog
         Caption = 'Private Key (optional):'
       end
       object LabelKeyNote: TLabel
-        Left = 14
-        Top = 260
+        Left = 160
+        Top = 169
         Width = 412
         Height = 15
         Margins.Left = 5
@@ -255,7 +242,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object LabelPubKeyPath: TLabel
         Left = 14
-        Top = 208
+        Top = 226
         Width = 113
         Height = 15
         Margins.Left = 5
@@ -312,7 +299,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object EditKeyPath: TEdit
         Left = 160
-        Top = 168
+        Top = 186
         Width = 360
         Height = 23
         Margins.Left = 5
@@ -323,7 +310,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object BtnBrowseKey: TButton
         Left = 528
-        Top = 168
+        Top = 186
         Width = 80
         Height = 24
         Margins.Left = 5
@@ -336,7 +323,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object EditPubKeyPath: TEdit
         Left = 160
-        Top = 204
+        Top = 222
         Width = 360
         Height = 23
         Margins.Left = 5
@@ -347,7 +334,7 @@ object SftpSyncDialog: TSftpSyncDialog
       end
       object BtnBrowsePubKey: TButton
         Left = 528
-        Top = 204
+        Top = 222
         Width = 80
         Height = 24
         Margins.Left = 5
@@ -357,6 +344,19 @@ object SftpSyncDialog: TSftpSyncDialog
         Caption = 'Browse...'
         TabOrder = 7
         OnClick = BtnBrowsePubKeyClick
+      end
+      object BtnTestConnection: TButton
+        Left = 488
+        Top = 14
+        Width = 120
+        Height = 28
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Test Connection'
+        TabOrder = 8
+        OnClick = BtnTestConnectionClick
       end
     end
     object TabPaths: TTabSheet
@@ -488,27 +488,28 @@ object SftpSyncDialog: TSftpSyncDialog
         Caption = 'Sync interval (seconds):'
       end
       object LabelIntervalNote: TLabel
-        Left = 14
-        Top = 56
-        Width = 419
-        Height = 15
+        Left = 84
+        Top = 41
+        Width = 303
+        Height = 26
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
+        Alignment = taCenter
         Caption = 
-          'Changed files are batched and uploaded once per interval. Minimu' +
-          'm: 1 second.'
+          'Changed files are batched and uploaded once per interval.'#13#10'Minim' +
+          'um: 1 second.'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clGrayText
-        Font.Height = -12
+        Font.Height = -11
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
       end
       object LabelWatchedExts: TLabel
         Left = 14
-        Top = 162
+        Top = 188
         Width = 127
         Height = 15
         Margins.Left = 5
@@ -518,23 +519,35 @@ object SftpSyncDialog: TSftpSyncDialog
         Caption = 'Watched file extensions:'
       end
       object LabelWatchedExtsHint: TLabel
-        Left = 14
-        Top = 188
-        Width = 432
-        Height = 15
+        Left = 178
+        Top = 210
+        Width = 419
+        Height = 13
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
+        Alignment = taCenter
         Caption = 
           'Space or comma separated. Example: .pas .dfm .dpr .dpk .dproj .r' +
           'es .rc .txt .ini .xml'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clGrayText
-        Font.Height = -12
+        Font.Height = -11
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+      end
+      object LabelQuietPeriod: TLabel
+        Left = 12
+        Top = 150
+        Width = 165
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Remote quiet period (seconds):'
       end
       object EditInterval: TEdit
         Left = 200
@@ -569,13 +582,27 @@ object SftpSyncDialog: TSftpSyncDialog
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption = 'Backup overwritten local files to __backup\backup_NNN.zip before downloading'
+        Caption = 
+          'Backup overwritten local files to __backup\backup_NNN.zip before' +
+          ' downloading'
         TabOrder = 2
       end
+      object EditQuietPeriod: TEdit
+        Left = 214
+        Top = 146
+        Width = 80
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 3
+        Text = '60'
+      end
       object EditWatchedExts: TEdit
-        Left = 190
-        Top = 158
-        Width = 390
+        Left = 170
+        Top = 185
+        Width = 437
         Height = 23
         Hint = 'Space or comma separated list, e.g.: .pas .dfm .dpr .dproj'
         Margins.Left = 5
@@ -584,11 +611,11 @@ object SftpSyncDialog: TSftpSyncDialog
         Margins.Bottom = 5
         ParentShowHint = False
         ShowHint = True
-        TabOrder = 3
+        TabOrder = 5
       end
       object GroupBoxPermissions: TGroupBox
         Left = 14
-        Top = 228
+        Top = 250
         Width = 373
         Height = 129
         Caption = 'Remote file permissions'
@@ -713,7 +740,7 @@ object SftpSyncDialog: TSftpSyncDialog
         Left = 0
         Top = 0
         Width = 642
-        Height = 315
+        Height = 367
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -729,11 +756,10 @@ object SftpSyncDialog: TSftpSyncDialog
         ScrollBars = ssVertical
         TabOrder = 0
         WordWrap = False
-        ExplicitWidth = 692
       end
       object PanelLogBtns: TPanel
         Left = 0
-        Top = 315
+        Top = 367
         Width = 642
         Height = 28
         Margins.Left = 5
@@ -743,7 +769,6 @@ object SftpSyncDialog: TSftpSyncDialog
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitWidth = 692
         object BtnClearLog: TButton
           Left = 4
           Top = 2

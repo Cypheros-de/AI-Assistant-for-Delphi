@@ -1,11 +1,9 @@
 unit CyAIAssistant.SftpSyncDialog;
 
-{
-  CyAIAssistant.SftpSyncDialog.pas
-
-  UI for configuring and controlling SFTP project sync.
-  Settings are persisted in CyAiAssistant.sync in the project folder.
-}
+// CyAIAssistant.SftpSyncDialog.pas
+//
+// UI for configuring and controlling SFTP project sync.
+// Settings are persisted in CyAiAssistant.sync in the project folder.
 
 interface
 
@@ -20,70 +18,72 @@ uses
 type
   TSftpSyncDialog = class(TForm)
     // -- Layout ----------------------------------------------------------
-    PanelTop        : TPanel;
-      LabelTitle    : TLabel;
-      LabelStatus   : TLabel;
-    PanelBottom     : TPanel;
-      BtnStartStop      : TButton;
-      BtnTestConnection : TButton;
-      BtnPushAll        : TButton;
-      BtnPullAll        : TButton;
-      BtnClose          : TButton;
-    PageControl     : TPageControl;
-      // Tab: Connection
-      TabConnection : TTabSheet;
-        LabelHost   : TLabel;
-        LabelPort   : TLabel;
-        LabelUser   : TLabel;
-        LabelPass   : TLabel;
-        LabelKeyPath: TLabel;
-        LabelKeyNote: TLabel;
-        EditHost    : TEdit;
-        EditPort    : TEdit;
-        EditUser    : TEdit;
-        EditPass    : TEdit;
-        EditKeyPath : TEdit;
-        BtnBrowseKey: TButton;
-        LabelPubKeyPath: TLabel;
-        EditPubKeyPath : TEdit;
-        BtnBrowsePubKey: TButton;
-      // Tab: Paths
-      TabPaths      : TTabSheet;
-        LabelLocalBase : TLabel;
-        LabelRemoteBase: TLabel;
-        LabelPathNote  : TLabel;
-        EditLocalBase   : TEdit;
-        BtnBrowseLocal  : TButton;
-        EditRemoteBase  : TEdit;
-        CheckIncludeSubDirs    : TCheckBox;
-        CheckAutoDetectProject : TCheckBox;
-      // Tab: Options
-      TabOptions    : TTabSheet;
-        LabelInterval    : TLabel;
-        LabelIntervalNote: TLabel;
-        EditInterval     : TEdit;
-        CheckStartWithProject: TCheckBox;
-        CheckBackupEnabled   : TCheckBox;
-        LabelWatchedExts    : TLabel;
-        LabelWatchedExtsHint: TLabel;
-        EditWatchedExts     : TEdit;
-        // User
-        CheckPermUserRead : TCheckBox;
-        CheckPermUserWrite: TCheckBox;
-        CheckPermUserExec : TCheckBox;
-        // Group
-        CheckPermGroupRead : TCheckBox;
-        CheckPermGroupWrite: TCheckBox;
-        CheckPermGroupExec : TCheckBox;
-        // Other
-        CheckPermOtherRead : TCheckBox;
-        CheckPermOtherWrite: TCheckBox;
-        CheckPermOtherExec : TCheckBox;
-      // Tab: Log
-      TabLog        : TTabSheet;
-        MemoLog     : TMemo;
-        PanelLogBtns: TPanel;
-          BtnClearLog: TButton;
+    PanelTop: TPanel;
+    LabelTitle: TLabel;
+    LabelStatus: TLabel;
+    PanelBottom: TPanel;
+    BtnStartStop: TButton;
+    BtnTestConnection: TButton;
+    BtnPushAll: TButton;
+    BtnPullAll: TButton;
+    BtnClose: TButton;
+    PageControl: TPageControl;
+    // Tab: Connection
+    TabConnection: TTabSheet;
+    LabelHost: TLabel;
+    LabelPort: TLabel;
+    LabelUser: TLabel;
+    LabelPass: TLabel;
+    LabelKeyPath: TLabel;
+    LabelKeyNote: TLabel;
+    EditHost: TEdit;
+    EditPort: TEdit;
+    EditUser: TEdit;
+    EditPass: TEdit;
+    EditKeyPath: TEdit;
+    BtnBrowseKey: TButton;
+    LabelPubKeyPath: TLabel;
+    EditPubKeyPath: TEdit;
+    BtnBrowsePubKey: TButton;
+    // Tab: Paths
+    TabPaths: TTabSheet;
+    LabelLocalBase: TLabel;
+    LabelRemoteBase: TLabel;
+    LabelPathNote: TLabel;
+    EditLocalBase: TEdit;
+    BtnBrowseLocal: TButton;
+    EditRemoteBase: TEdit;
+    CheckIncludeSubDirs: TCheckBox;
+    CheckAutoDetectProject: TCheckBox;
+    // Tab: Options
+    TabOptions: TTabSheet;
+    LabelInterval: TLabel;
+    LabelIntervalNote: TLabel;
+    EditInterval: TEdit;
+    CheckStartWithProject: TCheckBox;
+    CheckBackupEnabled: TCheckBox;
+    LabelQuietPeriod: TLabel;
+    EditQuietPeriod: TEdit;
+    LabelWatchedExts: TLabel;
+    LabelWatchedExtsHint: TLabel;
+    EditWatchedExts: TEdit;
+    // User
+    CheckPermUserRead: TCheckBox;
+    CheckPermUserWrite: TCheckBox;
+    CheckPermUserExec: TCheckBox;
+    // Group
+    CheckPermGroupRead: TCheckBox;
+    CheckPermGroupWrite: TCheckBox;
+    CheckPermGroupExec: TCheckBox;
+    // Other
+    CheckPermOtherRead: TCheckBox;
+    CheckPermOtherWrite: TCheckBox;
+    CheckPermOtherExec: TCheckBox;
+    // Tab: Log
+    TabLog: TTabSheet;
+    MemoLog: TMemo;
+    PanelLogBtns: TPanel;
+    BtnClearLog: TButton;
     GroupBoxPermissions: TGroupBox;
     // -- Events ----------------------------------------------------------
     procedure BtnStartStopClick(Sender: TObject);
@@ -101,14 +101,14 @@ type
     procedure OnSyncLog(const AMsg: string);
     procedure LoadSettings;
     procedure SaveSettings;
-    function  GetActiveProjectPath: string;
-    function  GetConfigFilePath: string;
-    function  ParseWatchedExts(const AText: string): TArray<string>;
-    function  GetPermissions: TFilePermissions;
+    function GetActiveProjectPath: string;
+    function GetConfigFilePath: string;
+    function ParseWatchedExts(const AText: string): TArray<string>;
+    function GetPermissions: TFilePermissions;
     procedure SetPermissions(APerms: TFilePermissions);
   public
     constructor Create(AOwner: TComponent); override;
-    destructor  Destroy; override;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -125,21 +125,19 @@ uses
   SSHPascal.SftpClient;
 
 const
-  CONFIG_FILE = 'CyAiAssistant.sync';  // stored in the active project folder
+  CONFIG_FILE = 'CyAiAssistant.sync'; // stored in the active project folder
   CONFIG_SECTION = 'SftpSync';
 
 const
-  DEFAULT_PERMISSIONS: TFilePermissions =
-    [fpUserRead, fpUserWrite, fpUserExec,
-     fpGroupRead, fpGroupWrite, fpGroupExec,
-     fpOtherRead, fpOtherExec];
+  DEFAULT_PERMISSIONS: TFilePermissions = [fpUserRead, fpUserWrite, fpUserExec, fpGroupRead, fpGroupWrite, fpGroupExec, fpOtherRead, fpOtherExec];
 
-// TFilePermissions is a set of 9 values (ordinals 0..8).
-// Delphi stores sets as bit arrays sized to the smallest integer that fits:
-// 9 elements require 2 bytes (Word), not 1 (Byte).
-// We persist as Integer in the registry but only the low 16 bits are used.
+  // TFilePermissions is a set of 9 values (ordinals 0..8).
+  // Delphi stores sets as bit arrays sized to the smallest integer that fits:
+  // 9 elements require 2 bytes (Word), not 1 (Byte).
+  // We persist as Integer in the registry but only the low 16 bits are used.
 function PermsToInt(APerms: TFilePermissions): Integer;
-var W: Word;
+var
+  W: Word;
 begin
   W := 0;
   Move(APerms, W, SizeOf(TFilePermissions));
@@ -147,29 +145,30 @@ begin
 end;
 
 function IntToPerms(AInt: Integer): TFilePermissions;
-var W: Word;
+var
+  W: Word;
 begin
   Result := [];
   W := Word(AInt);
   Move(W, Result, SizeOf(TFilePermissions));
 end;
 
-{ ---------------------------------------------------------------------------
-  Construction / destruction
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Construction / destruction
+// ---------------------------------------------------------------------------
 
 constructor TSftpSyncDialog.Create(AOwner: TComponent);
 var
-  I: Integer;
+  i: Integer;
 begin
   inherited Create(AOwner);
-  SetPermissions(DEFAULT_PERMISSIONS);  // applied before LoadSettings may override
+  SetPermissions(DEFAULT_PERMISSIONS); // applied before LoadSettings may override
   LoadSettings;
 
   // Replay buffered log lines from before this dialog was opened
   if GSftpSync.LogBuffer.Count > 0 then
-    for I := 0 to GSftpSync.LogBuffer.Count - 1 do
-      MemoLog.Lines.Add(GSftpSync.LogBuffer[I]);
+    for i := 0 to GSftpSync.LogBuffer.Count - 1 do
+      MemoLog.Lines.Add(GSftpSync.LogBuffer[i]);
 
   GSftpSync.OnLog := OnSyncLog;
   UpdateStatusUI;
@@ -185,9 +184,9 @@ begin
   inherited;
 end;
 
-{ ---------------------------------------------------------------------------
-  Status helpers
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Status helpers
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncDialog.UpdateStatusUI;
 var
@@ -195,17 +194,17 @@ var
 begin
   if GSftpSync.IsRunning then
   begin
-    LabelStatus.Caption    := '[*] Active';
+    LabelStatus.Caption := '[*] Active';
     LabelStatus.Font.Color := clLime;
-    BtnStartStop.Caption   := 'Stop Sync';
+    BtnStartStop.Caption := 'Stop Sync';
     BtnStartStop.Font.Color := clMaroon;
     CanForce := False;
   end
   else
   begin
-    LabelStatus.Caption    := '[ ] Inactive';
+    LabelStatus.Caption := '[ ] Inactive';
     LabelStatus.Font.Color := clSilver;
-    BtnStartStop.Caption   := 'Start Sync';
+    BtnStartStop.Caption := 'Start Sync';
     BtnStartStop.Font.Color := clWindowText;
     CanForce := not GSftpSync.IsBusy;
   end;
@@ -222,16 +221,18 @@ end;
 
 function TSftpSyncDialog.GetActiveProjectPath: string;
 var
-  ModSvc    : IOTAModuleServices;
-  ProjGroup : IOTAProjectGroup;
-  Project   : IOTAProject;
-  Module    : IOTAModule;
-  EditSvc   : IOTAEditorServices;
-  FileName  : string;
-  I, J, K   : Integer;
+  ModSvc: IOTAModuleServices;
+  ProjGroup: IOTAProjectGroup;
+  Project: IOTAProject;
+  Module: IOTAModule;
+  Mod2: IOTAModuleInfo;
+  EditSvc: IOTAEditorServices;
+  FileName: string;
+  i, j, k: Integer;
 begin
   Result := '';
-  if not Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then Exit;
+  if not Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then
+    Exit;
 
   // --- Strategy 1: MainProjectGroup.ActiveProject -------------------------
   // IOTAModuleServices.MainProjectGroup returns the top-level project group.
@@ -251,20 +252,20 @@ begin
 
   if FileName <> '' then
   begin
-    for I := 0 to ModSvc.ModuleCount - 1 do
+    for i := 0 to ModSvc.ModuleCount - 1 do
     begin
-      Module := ModSvc.Modules[I];
+      Module := ModSvc.Modules[i];
       if Supports(Module, IOTAProjectGroup, ProjGroup) then
       begin
-        for J := 0 to ProjGroup.ProjectCount - 1 do
+        for j := 0 to ProjGroup.ProjectCount - 1 do
         begin
-          Project := ProjGroup.Projects[J];
-          if not Assigned(Project) then Continue;
-          for K := 0 to Project.GetModuleCount - 1 do
+          Project := ProjGroup.Projects[j];
+          if not Assigned(Project) then
+            Continue;
+          for k := 0 to Project.GetModuleCount - 1 do
           begin
-            var Mod2 := Project.GetModule(K);
-            if Assigned(Mod2) and
-               SameText(Mod2.FileName, FileName) then
+            Mod2 := Project.GetModule(k);
+            if Assigned(Mod2) and SameText(Mod2.FileName, FileName) then
             begin
               Result := TPath.GetDirectoryName(Project.FileName);
               Exit;
@@ -274,11 +275,10 @@ begin
       end
       else if Supports(Module, IOTAProject, Project) then
       begin
-        for K := 0 to Project.GetModuleCount - 1 do
+        for k := 0 to Project.GetModuleCount - 1 do
         begin
-          var Mod2 := Project.GetModule(K);
-          if Assigned(Mod2) and
-             SameText(Mod2.FileName, FileName) then
+          Mod2 := Project.GetModule(k);
+          if Assigned(Mod2) and SameText(Mod2.FileName, FileName) then
           begin
             Result := TPath.GetDirectoryName(Project.FileName);
             Exit;
@@ -289,9 +289,9 @@ begin
   end;
 
   // --- Strategy 3: first IOTAProject found --------------------------------
-  for I := 0 to ModSvc.ModuleCount - 1 do
+  for i := 0 to ModSvc.ModuleCount - 1 do
   begin
-    Module := ModSvc.Modules[I];
+    Module := ModSvc.Modules[i];
     if Supports(Module, IOTAProject, Project) then
     begin
       Result := TPath.GetDirectoryName(Project.FileName);
@@ -300,16 +300,16 @@ begin
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Config file  (CyAiAssistant.sync in the project folder)
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Config file  (CyAiAssistant.sync in the project folder)
+// ---------------------------------------------------------------------------
 
 function TSftpSyncDialog.ParseWatchedExts(const AText: string): TArray<string>;
 var
   Parts: TArray<string>;
-  S    : string;
-  Ext  : string;
-  List : TList<string>;
+  S: string;
+  Ext: string;
+  List: TList<string>;
 begin
   List := TList<string>.Create;
   try
@@ -318,16 +318,25 @@ begin
     for S in Parts do
     begin
       Ext := LowerCase(Trim(S));
-      if Ext = '' then Continue;
-      if Ext[1] <> '.' then Ext := '.' + Ext;
+      if Ext = '' then
+        Continue;
+      if Ext[1] <> '.' then
+        Ext := '.' + Ext;
       List.Add(Ext);
     end;
     if List.Count = 0 then
     begin
       // Fall back to defaults if the field is cleared
-      List.Add('.pas'); List.Add('.dfm'); List.Add('.dpr');
-      List.Add('.dpk'); List.Add('.dproj'); List.Add('.res');
-      List.Add('.rc');  List.Add('.txt'); List.Add('.ini'); List.Add('.xml');
+      List.Add('.pas');
+      List.Add('.dfm');
+      List.Add('.dpr');
+      List.Add('.dpk');
+      List.Add('.dproj');
+      List.Add('.res');
+      List.Add('.rc');
+      List.Add('.txt');
+      List.Add('.ini');
+      List.Add('.xml');
     end;
     Result := List.ToArray;
   finally
@@ -343,36 +352,35 @@ begin
   if ProjectPath <> '' then
     Result := TPath.Combine(ProjectPath, CONFIG_FILE)
   else
-    Result := TPath.Combine(
-      TPath.GetDirectoryName(ParamStr(0)), CONFIG_FILE);
+    Result := TPath.Combine(TPath.GetDirectoryName(ParamStr(0)), CONFIG_FILE);
 end;
 
 procedure TSftpSyncDialog.LoadSettings;
 var
-  Ini : TIniFile;
+  Ini: TIniFile;
   Path: string;
 begin
   Path := GetConfigFilePath;
-  if not TFile.Exists(Path) then Exit;
+  if not TFile.Exists(Path) then
+    Exit;
   Ini := TIniFile.Create(Path);
   try
-    EditHost.Text       := Ini.ReadString (CONFIG_SECTION, 'Host',       '');
-    EditPort.Text       := Ini.ReadString (CONFIG_SECTION, 'Port',       '22');
-    EditUser.Text       := Ini.ReadString (CONFIG_SECTION, 'User',       '');
-    EditPass.Text       := Ini.ReadString (CONFIG_SECTION, 'Pass',       '');
-    EditKeyPath.Text    := Ini.ReadString (CONFIG_SECTION, 'KeyPath',    '');
-    EditPubKeyPath.Text := Ini.ReadString (CONFIG_SECTION, 'PubKeyPath', '');
-    EditLocalBase.Text  := Ini.ReadString (CONFIG_SECTION, 'LocalBase',  '');
-    EditRemoteBase.Text := Ini.ReadString (CONFIG_SECTION, 'RemoteBase', '');
-    EditInterval.Text   := Ini.ReadString (CONFIG_SECTION, 'Interval',   '5');
-    CheckIncludeSubDirs.Checked    := Ini.ReadBool   (CONFIG_SECTION, 'SubDirs',    True);
-    CheckAutoDetectProject.Checked := Ini.ReadBool   (CONFIG_SECTION, 'AutoDetect', True);
-    CheckStartWithProject.Checked  := Ini.ReadBool   (CONFIG_SECTION, 'AutoStart',  False);
-    CheckBackupEnabled.Checked     := Ini.ReadBool   (CONFIG_SECTION, 'Backup',     False);
-    SetPermissions(IntToPerms(Ini.ReadInteger(CONFIG_SECTION, 'Permissions',
-      PermsToInt(DEFAULT_PERMISSIONS))));
-    EditWatchedExts.Text := Ini.ReadString(CONFIG_SECTION, 'WatchedExts',
-      '.pas .dfm .dpr .dpk .dproj .res .rc .txt .ini .xml');
+    EditHost.Text := Ini.ReadString(CONFIG_SECTION, 'Host', '');
+    EditPort.Text := Ini.ReadString(CONFIG_SECTION, 'Port', '22');
+    EditUser.Text := Ini.ReadString(CONFIG_SECTION, 'User', '');
+    EditPass.Text := Ini.ReadString(CONFIG_SECTION, 'Pass', '');
+    EditKeyPath.Text := Ini.ReadString(CONFIG_SECTION, 'KeyPath', '');
+    EditPubKeyPath.Text := Ini.ReadString(CONFIG_SECTION, 'PubKeyPath', '');
+    EditLocalBase.Text := Ini.ReadString(CONFIG_SECTION, 'LocalBase', '');
+    EditRemoteBase.Text := Ini.ReadString(CONFIG_SECTION, 'RemoteBase', '');
+    EditInterval.Text := Ini.ReadString(CONFIG_SECTION, 'Interval', '5');
+    CheckIncludeSubDirs.Checked := Ini.ReadBool(CONFIG_SECTION, 'SubDirs', True);
+    CheckAutoDetectProject.Checked := Ini.ReadBool(CONFIG_SECTION, 'AutoDetect', True);
+    CheckStartWithProject.Checked := Ini.ReadBool(CONFIG_SECTION, 'AutoStart', False);
+    CheckBackupEnabled.Checked := Ini.ReadBool(CONFIG_SECTION, 'Backup', False);
+    EditQuietPeriod.Text := Ini.ReadString(CONFIG_SECTION, 'QuietPeriod', '60');
+    SetPermissions(IntToPerms(Ini.ReadInteger(CONFIG_SECTION, 'Permissions', PermsToInt(DEFAULT_PERMISSIONS))));
+    EditWatchedExts.Text := Ini.ReadString(CONFIG_SECTION, 'WatchedExts', '.pas .dfm .dpr .dpk .dproj .res .rc .txt .ini .xml');
   finally
     Ini.Free;
   end;
@@ -380,45 +388,49 @@ end;
 
 procedure TSftpSyncDialog.SaveSettings;
 var
-  Ini : TIniFile;
+  Ini: TIniFile;
   Path: string;
 begin
   Path := GetConfigFilePath;
   Ini := TIniFile.Create(Path);
   try
-    Ini.WriteString (CONFIG_SECTION, 'Host',        Trim(EditHost.Text));
-    Ini.WriteString (CONFIG_SECTION, 'Port',        Trim(EditPort.Text));
-    Ini.WriteString (CONFIG_SECTION, 'User',        Trim(EditUser.Text));
-    Ini.WriteString (CONFIG_SECTION, 'Pass',        EditPass.Text);
-    Ini.WriteString (CONFIG_SECTION, 'KeyPath',     Trim(EditKeyPath.Text));
-    Ini.WriteString (CONFIG_SECTION, 'PubKeyPath',  Trim(EditPubKeyPath.Text));
-    Ini.WriteString (CONFIG_SECTION, 'LocalBase',   Trim(EditLocalBase.Text));
-    Ini.WriteString (CONFIG_SECTION, 'RemoteBase',  Trim(EditRemoteBase.Text));
-    Ini.WriteString (CONFIG_SECTION, 'Interval',    Trim(EditInterval.Text));
-    Ini.WriteBool   (CONFIG_SECTION, 'SubDirs',     CheckIncludeSubDirs.Checked);
-    Ini.WriteBool   (CONFIG_SECTION, 'AutoDetect',  CheckAutoDetectProject.Checked);
-    Ini.WriteBool   (CONFIG_SECTION, 'AutoStart',   CheckStartWithProject.Checked);
-    Ini.WriteBool   (CONFIG_SECTION, 'Backup',      CheckBackupEnabled.Checked);
+    Ini.WriteString(CONFIG_SECTION, 'Host', Trim(EditHost.Text));
+    Ini.WriteString(CONFIG_SECTION, 'Port', Trim(EditPort.Text));
+    Ini.WriteString(CONFIG_SECTION, 'User', Trim(EditUser.Text));
+    Ini.WriteString(CONFIG_SECTION, 'Pass', EditPass.Text);
+    Ini.WriteString(CONFIG_SECTION, 'KeyPath', Trim(EditKeyPath.Text));
+    Ini.WriteString(CONFIG_SECTION, 'PubKeyPath', Trim(EditPubKeyPath.Text));
+    Ini.WriteString(CONFIG_SECTION, 'LocalBase', Trim(EditLocalBase.Text));
+    Ini.WriteString(CONFIG_SECTION, 'RemoteBase', Trim(EditRemoteBase.Text));
+    Ini.WriteString(CONFIG_SECTION, 'Interval', Trim(EditInterval.Text));
+    Ini.WriteBool(CONFIG_SECTION, 'SubDirs', CheckIncludeSubDirs.Checked);
+    Ini.WriteBool(CONFIG_SECTION, 'AutoDetect', CheckAutoDetectProject.Checked);
+    Ini.WriteBool(CONFIG_SECTION, 'AutoStart', CheckStartWithProject.Checked);
+    Ini.WriteBool(CONFIG_SECTION, 'Backup', CheckBackupEnabled.Checked);
+    Ini.WriteString(CONFIG_SECTION, 'QuietPeriod', Trim(EditQuietPeriod.Text));
     Ini.WriteInteger(CONFIG_SECTION, 'Permissions', PermsToInt(GetPermissions));
-    Ini.WriteString (CONFIG_SECTION, 'WatchedExts', Trim(EditWatchedExts.Text));
+    Ini.WriteString(CONFIG_SECTION, 'WatchedExts', Trim(EditWatchedExts.Text));
   finally
     Ini.Free;
   end;
 end;
 
-{ ---------------------------------------------------------------------------
-  Start / Stop
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Start / Stop
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncDialog.BtnStartStopClick(Sender: TObject);
 var
   LocalBase: string;
-  Port     : Word;
-  Interval : Integer;
+  Port: Word;
+  Interval: Integer;
+  FolderName: string;
+  RemBase: string;
+  RemotePath: string;
 begin
   if GSftpSync.IsRunning then
   begin
-    GSftpSync.SaveCacheTo(GetConfigFilePath);  // persist cache before stopping
+    GSftpSync.SaveCacheTo(GetConfigFilePath); // persist cache before stopping
     GSftpSync.Stop;
     SaveSettings;
     UpdateStatusUI;
@@ -460,9 +472,7 @@ begin
 
   if LocalBase = '' then
   begin
-    ShowMessage(
-      'Could not determine the local project folder.' + sLineBreak +
-      'Please enter it manually on the Paths tab, or open a project first.');
+    ShowMessage('Could not determine the local project folder.' + sLineBreak + 'Please enter it manually on the Paths tab, or open a project first.');
     PageControl.ActivePage := TabPaths;
     EditLocalBase.SetFocus;
     Exit;
@@ -482,13 +492,13 @@ begin
 
   // When auto-detecting the local folder, mirror its name on the remote side.
   // E.g. local = C:\Projects\MyApp  remote base /  ->  /MyApp
-  //      local = C:\Projects\MyApp  remote base /var/www  ->  /var/www/MyApp
+  // local = C:\Projects\MyApp  remote base /var/www  ->  /var/www/MyApp
   if CheckAutoDetectProject.Checked then
   begin
-    var FolderName := TPath.GetFileName(ExcludeTrailingPathDelimiter(LocalBase));
+    FolderName := TPath.GetFileName(ExcludeTrailingPathDelimiter(LocalBase));
     if FolderName <> '' then
     begin
-      var RemBase := Trim(EditRemoteBase.Text);
+      RemBase := Trim(EditRemoteBase.Text);
       // Strip trailing slash (but keep bare /)
       while (Length(RemBase) > 1) and (RemBase[Length(RemBase)] = '/') do
         RemBase := Copy(RemBase, 1, Length(RemBase) - 1);
@@ -496,16 +506,16 @@ begin
       if not SameText(TPath.GetFileName(RemBase), FolderName) then
         RemBase := RemBase + '/' + FolderName;
       EditRemoteBase.Text := RemBase;
-      EditLocalBase.Text  := LocalBase;  // show resolved path in the field
+      EditLocalBase.Text := LocalBase; // show resolved path in the field
     end;
   end;
 
   // -- Sanitise remote base path ---------------------------------------------
-  // ? Backslashes -> forward slashes
-  // ? Collapse any run of // down to a single /
-  // ? Always ensure it starts with exactly one /
-  // ? Strip trailing slash unless the path is bare /
-  var RemotePath := StringReplace(Trim(EditRemoteBase.Text), '\', '/', [rfReplaceAll]);
+  // Backslashes -> forward slashes
+  // Collapse any run of // down to a single /
+  // Always ensure it starts with exactly one /
+  // Strip trailing slash unless the path is bare /
+  RemotePath := StringReplace(Trim(EditRemoteBase.Text), '\', '/', [rfReplaceAll]);
   while Pos('//', RemotePath) > 0 do
     RemotePath := StringReplace(RemotePath, '//', '/', [rfReplaceAll]);
   if (RemotePath = '') or (RemotePath[1] <> '/') then
@@ -524,27 +534,17 @@ begin
   GSftpSync.LoadCacheFrom(GetConfigFilePath);
 
   GSftpSync.BackupEnabled := CheckBackupEnabled.Checked;
-  GSftpSync.Start(
-    Trim(EditHost.Text),
-    Port,
-    Trim(EditUser.Text),
-    EditPass.Text,
-    Trim(EditKeyPath.Text),
-    Trim(EditPubKeyPath.Text),
-    EditRemoteBase.Text,
-    LocalBase,
-    CheckIncludeSubDirs.Checked,
-    Interval,
-    GetPermissions,
-    ParseWatchedExts(EditWatchedExts.Text));
+  GSftpSync.RemoteQuietPeriodSecs := StrToIntDef(EditQuietPeriod.Text, 60);
+  GSftpSync.Start(Trim(EditHost.Text), Port, Trim(EditUser.Text), EditPass.Text, Trim(EditKeyPath.Text), Trim(EditPubKeyPath.Text), EditRemoteBase.Text,
+    LocalBase, CheckIncludeSubDirs.Checked, Interval, GetPermissions, ParseWatchedExts(EditWatchedExts.Text));
 
   UpdateStatusUI;
   PageControl.ActivePage := TabLog;
 end;
 
-{ ---------------------------------------------------------------------------
-  Push All / Pull All
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Push All / Pull All
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncDialog.BtnPushAllClick(Sender: TObject);
 var
@@ -552,11 +552,9 @@ var
   Port: Word;
   RemotePath: string;
 begin
-  if MessageDlg(
-      'Push All will overwrite ALL files on the remote server with your local versions.' + sLineBreak +
-      sLineBreak +
-      'Continue?',
-      mtWarning, [mbYes, mbNo], 0) <> mrYes then Exit;
+  if MessageDlg('Push All will overwrite ALL files on the remote server with your local versions.' + sLineBreak + sLineBreak + 'Continue?', mtWarning,
+    [mbYes, mbNo], 0) <> mrYes then
+    Exit;
 
   LocalBase := Trim(EditLocalBase.Text);
   if (LocalBase = '') and CheckAutoDetectProject.Checked then
@@ -567,18 +565,16 @@ begin
     Exit;
   end;
 
-  Port       := Word(StrToIntDef(EditPort.Text, 22));
+  Port := Word(StrToIntDef(EditPort.Text, 22));
   RemotePath := Trim(EditRemoteBase.Text);
-  if RemotePath = '' then RemotePath := '/';
+  if RemotePath = '' then
+    RemotePath := '/';
 
   SaveSettings;
   GSftpSync.BackupEnabled := CheckBackupEnabled.Checked;
-  GSftpSync.Configure(
-    Trim(EditHost.Text), Port, Trim(EditUser.Text), EditPass.Text,
-    Trim(EditKeyPath.Text), Trim(EditPubKeyPath.Text),
-    RemotePath, LocalBase,
-    CheckIncludeSubDirs.Checked, GetPermissions,
-    ParseWatchedExts(EditWatchedExts.Text));
+  GSftpSync.RemoteQuietPeriodSecs := StrToIntDef(EditQuietPeriod.Text, 60);
+  GSftpSync.Configure(Trim(EditHost.Text), Port, Trim(EditUser.Text), EditPass.Text, Trim(EditKeyPath.Text), Trim(EditPubKeyPath.Text), RemotePath, LocalBase,
+    CheckIncludeSubDirs.Checked, GetPermissions, ParseWatchedExts(EditWatchedExts.Text));
 
   BtnPushAll.Enabled := False;
   BtnPullAll.Enabled := False;
@@ -596,12 +592,9 @@ var
   Port: Word;
   RemotePath: string;
 begin
-  if MessageDlg(
-      'Pull All will overwrite ALL local files with the remote versions.' + sLineBreak +
-      'Local changes not yet pushed will be lost.' + sLineBreak +
-      sLineBreak +
-      'Continue?',
-      mtWarning, [mbYes, mbNo], 0) <> mrYes then Exit;
+  if MessageDlg('Pull All will overwrite ALL local files with the remote versions.' + sLineBreak + 'Local changes not yet pushed will be lost.' + sLineBreak +
+    sLineBreak + 'Continue?', mtWarning, [mbYes, mbNo], 0) <> mrYes then
+    Exit;
 
   LocalBase := Trim(EditLocalBase.Text);
   if (LocalBase = '') and CheckAutoDetectProject.Checked then
@@ -612,18 +605,16 @@ begin
     Exit;
   end;
 
-  Port       := Word(StrToIntDef(EditPort.Text, 22));
+  Port := Word(StrToIntDef(EditPort.Text, 22));
   RemotePath := Trim(EditRemoteBase.Text);
-  if RemotePath = '' then RemotePath := '/';
+  if RemotePath = '' then
+    RemotePath := '/';
 
   SaveSettings;
   GSftpSync.BackupEnabled := CheckBackupEnabled.Checked;
-  GSftpSync.Configure(
-    Trim(EditHost.Text), Port, Trim(EditUser.Text), EditPass.Text,
-    Trim(EditKeyPath.Text), Trim(EditPubKeyPath.Text),
-    RemotePath, LocalBase,
-    CheckIncludeSubDirs.Checked, GetPermissions,
-    ParseWatchedExts(EditWatchedExts.Text));
+  GSftpSync.RemoteQuietPeriodSecs := StrToIntDef(EditQuietPeriod.Text, 60);
+  GSftpSync.Configure(Trim(EditHost.Text), Port, Trim(EditUser.Text), EditPass.Text, Trim(EditKeyPath.Text), Trim(EditPubKeyPath.Text), RemotePath, LocalBase,
+    CheckIncludeSubDirs.Checked, GetPermissions, ParseWatchedExts(EditWatchedExts.Text));
 
   BtnPushAll.Enabled := False;
   BtnPullAll.Enabled := False;
@@ -635,14 +626,15 @@ begin
     end);
 end;
 
-{ ---------------------------------------------------------------------------
-  Test connection
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Test connection
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncDialog.BtnTestConnectionClick(Sender: TObject);
 var
   Session: ISshSession;
-  Port   : Word;
+  Port: Word;
+  AuthOK: Boolean;
 begin
   if Trim(EditHost.Text) = '' then
   begin
@@ -659,12 +651,9 @@ begin
     Session.ConfigKnownHostCheckPolicy(False, DefKnownHostCheckPolicy);
     Session.Connect;
 
-    var AuthOK: Boolean;
     if Trim(EditKeyPath.Text) <> '' then
-      AuthOK := Session.UserAuthKey(
-        Trim(EditUser.Text),
-        Trim(EditPubKeyPath.Text),   // public key
-        Trim(EditKeyPath.Text))      // private key
+      AuthOK := Session.UserAuthKey(Trim(EditUser.Text), Trim(EditPubKeyPath.Text), // public key
+      Trim(EditKeyPath.Text)) // private key
     else
       AuthOK := Session.UserAuthPass(Trim(EditUser.Text), EditPass.Text);
 
@@ -674,8 +663,7 @@ begin
     if AuthOK then
       ShowMessage('[OK]  Connection and authentication successful!')
     else
-      ShowMessage('[FAILED]  Connected but authentication failed.' + sLineBreak +
-                  'Check username / password / key.');
+      ShowMessage('[FAILED]  Connected but authentication failed.' + sLineBreak + 'Check username / password / key.');
   except
     on E: Exception do
       ShowMessage('[FAILED]  Connection failed:' + sLineBreak + E.Message);
@@ -684,9 +672,9 @@ begin
   BtnTestConnection.Enabled := True;
 end;
 
-{ ---------------------------------------------------------------------------
-  Browse buttons
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Browse buttons
+// ---------------------------------------------------------------------------
 
 procedure TSftpSyncDialog.BtnBrowseKeyClick(Sender: TObject);
 var
@@ -694,7 +682,7 @@ var
 begin
   Dlg := TOpenDialog.Create(nil);
   try
-    Dlg.Title  := 'Select private key file';
+    Dlg.Title := 'Select private key file';
     Dlg.Filter := 'Key files (*.pem;*.ppk;*.key)|*.pem;*.ppk;*.key|All files (*.*)|*.*';
     if Trim(EditKeyPath.Text) <> '' then
       Dlg.InitialDir := TPath.GetDirectoryName(Trim(EditKeyPath.Text));
@@ -711,7 +699,7 @@ var
 begin
   Dlg := TOpenDialog.Create(nil);
   try
-    Dlg.Title  := 'Select public key file';
+    Dlg.Title := 'Select public key file';
     Dlg.Filter := 'Key files (*.pub;*.pem)|*.pub;*.pem|All files (*.*)|*.*';
     if Trim(EditPubKeyPath.Text) <> '' then
       Dlg.InitialDir := TPath.GetDirectoryName(Trim(EditPubKeyPath.Text));
@@ -728,7 +716,7 @@ var
 begin
   Dlg := TFileOpenDialog.Create(nil);
   try
-    Dlg.Title   := 'Select local project folder';
+    Dlg.Title := 'Select local project folder';
     Dlg.Options := [fdoPickFolders];
     if Trim(EditLocalBase.Text) <> '' then
       Dlg.DefaultFolder := Trim(EditLocalBase.Text);
@@ -744,40 +732,49 @@ begin
   MemoLog.Clear;
 end;
 
-{ ---------------------------------------------------------------------------
-  Permission helpers
-  --------------------------------------------------------------------------- }
+// ---------------------------------------------------------------------------
+// Permission helpers
+// ---------------------------------------------------------------------------
 
 function TSftpSyncDialog.GetPermissions: TFilePermissions;
 begin
   Result := [];
-  if CheckPermUserRead.Checked  then Include(Result, fpUserRead);
-  if CheckPermUserWrite.Checked then Include(Result, fpUserWrite);
-  if CheckPermUserExec.Checked  then Include(Result, fpUserExec);
-  if CheckPermGroupRead.Checked  then Include(Result, fpGroupRead);
-  if CheckPermGroupWrite.Checked then Include(Result, fpGroupWrite);
-  if CheckPermGroupExec.Checked  then Include(Result, fpGroupExec);
-  if CheckPermOtherRead.Checked  then Include(Result, fpOtherRead);
-  if CheckPermOtherWrite.Checked then Include(Result, fpOtherWrite);
-  if CheckPermOtherExec.Checked  then Include(Result, fpOtherExec);
+  if CheckPermUserRead.Checked then
+    Include(Result, fpUserRead);
+  if CheckPermUserWrite.Checked then
+    Include(Result, fpUserWrite);
+  if CheckPermUserExec.Checked then
+    Include(Result, fpUserExec);
+  if CheckPermGroupRead.Checked then
+    Include(Result, fpGroupRead);
+  if CheckPermGroupWrite.Checked then
+    Include(Result, fpGroupWrite);
+  if CheckPermGroupExec.Checked then
+    Include(Result, fpGroupExec);
+  if CheckPermOtherRead.Checked then
+    Include(Result, fpOtherRead);
+  if CheckPermOtherWrite.Checked then
+    Include(Result, fpOtherWrite);
+  if CheckPermOtherExec.Checked then
+    Include(Result, fpOtherExec);
 end;
 
 procedure TSftpSyncDialog.SetPermissions(APerms: TFilePermissions);
 begin
-  CheckPermUserRead.Checked  := fpUserRead  in APerms;
+  CheckPermUserRead.Checked := fpUserRead in APerms;
   CheckPermUserWrite.Checked := fpUserWrite in APerms;
-  CheckPermUserExec.Checked  := fpUserExec  in APerms;
-  CheckPermGroupRead.Checked  := fpGroupRead  in APerms;
+  CheckPermUserExec.Checked := fpUserExec in APerms;
+  CheckPermGroupRead.Checked := fpGroupRead in APerms;
   CheckPermGroupWrite.Checked := fpGroupWrite in APerms;
-  CheckPermGroupExec.Checked  := fpGroupExec  in APerms;
-  CheckPermOtherRead.Checked  := fpOtherRead  in APerms;
+  CheckPermGroupExec.Checked := fpGroupExec in APerms;
+  CheckPermOtherRead.Checked := fpOtherRead in APerms;
   CheckPermOtherWrite.Checked := fpOtherWrite in APerms;
-  CheckPermOtherExec.Checked  := fpOtherExec  in APerms;
+  CheckPermOtherExec.Checked := fpOtherExec in APerms;
 end;
 
 procedure TSftpSyncDialog.BtnCloseClick(Sender: TObject);
 begin
-  Close;  // triggers FormClose -> caFree; sync keeps running
+  Close; // triggers FormClose -> caFree; sync keeps running
 end;
 
 procedure TSftpSyncDialog.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -785,7 +782,7 @@ begin
   // Detach log callback -- engine keeps running in background
   if Assigned(GSftpSync) then
     GSftpSync.OnLog := nil;
-  Action := caFree;  // free the form instance on close
+  Action := caFree; // free the form instance on close
 end;
 
 end.

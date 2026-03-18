@@ -1,9 +1,7 @@
 ﻿unit CyAIAssistant.NewUnitDialog;
 
-{
-  CyAIAssistant.NewUnitDialog.pas
-  Generate a brand-new Delphi unit from a plain-English description.
-}
+// CyAIAssistant.NewUnitDialog.pas
+// Generate a brand-new Delphi unit from a plain-English description.
 
 interface
 
@@ -17,30 +15,30 @@ uses
 
 type
   TNewUnitDialog = class(TForm)
-    PanelTop      : TPanel;
-      LabelTitle  : TLabel;
-    PanelProvider : TPanel;
-      LabelProvider: TLabel;
-      LabelModel  : TLabel;
-      ComboProvider: TComboBox;
-      EditModel   : TEdit;
-    PanelBottom   : TPanel;
-      LabelStatus : TLabel;
-      BtnGenerate : TButton;
-      BtnStop     : TButton;
-      BtnCreateUnit: TButton;
-      BtnClose    : TButton;
-      ProgressBar : TProgressBar;
-    PanelMain     : TPanel;
-      PanelLeft   : TPanel;
-        LabelStyle: TLabel;
-        LabelDesc : TLabel;
-        ListStyle : TListBox;
-        MemoDesc  : TMemo;
-      SplitterMain: TSplitter;
-      PanelRight  : TPanel;
-        LabelResult: TLabel;
-        MemoResult : TMemo;
+    PanelTop: TPanel;
+    LabelTitle: TLabel;
+    PanelProvider: TPanel;
+    LabelProvider: TLabel;
+    LabelModel: TLabel;
+    ComboProvider: TComboBox;
+    EditModel: TEdit;
+    PanelBottom: TPanel;
+    LabelStatus: TLabel;
+    BtnGenerate: TButton;
+    BtnStop: TButton;
+    BtnCreateUnit: TButton;
+    BtnClose: TButton;
+    ProgressBar: TProgressBar;
+    PanelMain: TPanel;
+    PanelLeft: TPanel;
+    LabelStyle: TLabel;
+    LabelDesc: TLabel;
+    ListStyle: TListBox;
+    MemoDesc: TMemo;
+    SplitterMain: TSplitter;
+    PanelRight: TPanel;
+    LabelResult: TLabel;
+    MemoResult: TMemo;
     procedure ComboProviderChange(Sender: TObject);
     procedure BtnGenerateClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
@@ -48,15 +46,15 @@ type
     procedure BtnCloseClick(Sender: TObject);
     procedure MemoResultChange(Sender: TObject);
   private
-    FAIClient   : TAIClient;
-    FLastResult : string;
+    FAIClient: TAIClient;
+    FLastResult: string;
     procedure SetBusy(ABusy: Boolean);
     procedure UpdateModelHint;
-    function  BuildPrompt: string;
+    function BuildPrompt: string;
     procedure CreateIDEUnit(const ASource: string);
   public
     constructor Create(AOwner: TComponent); reintroduce;
-    destructor  Destroy; override;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -67,45 +65,28 @@ uses
   CyAIAssistant.IDETheme;
 
 const
-  STYLES: array[0..4] of record
-    Name    : string;
-    Template: string;
-  end = (
-    (Name: 'Full Unit';
-     Template:
-       'Write a complete, compilable Delphi unit based on the following description.' + sLineBreak +
-       'Include the unit header, interface section with type declarations, ' +
-       'and a full implementation. Add brief doc comments.' + sLineBreak +
-       'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak +
-       '{DESC}'),
-    (Name: 'Class Only';
-     Template:
-       'Write a single Delphi class (interface + implementation) based on the following description.' + sLineBreak +
-       'Wrap it in a minimal compilable unit. Add brief doc comments.' + sLineBreak +
-       'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak +
-       '{DESC}'),
-    (Name: 'Interface + Stub';
-     Template:
-       'Write a Delphi unit with a fully declared interface section (types, method signatures) ' +
-       'and stub implementations (empty bodies with TODO comments) based on the description.' + sLineBreak +
-       'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak +
-       '{DESC}'),
-    (Name: 'Unit Tests';
-     Template:
-       'Write a DUnitX test unit for a Delphi class described below.' + sLineBreak +
-       'Include [Test] methods covering the main scenarios and edge cases.' + sLineBreak +
-       'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak +
-       '{DESC}'),
-    (Name: 'Free Prompt';
-     Template: '{DESC}')
-  );
+STYLES:
+array [0 .. 4] of record Name: string;
+Template:
+string;
+end
+= ((Name: 'Full Unit'; Template: 'Write a complete, compilable Delphi unit based on the following description.' + sLineBreak +
+  'Include the unit header, interface section with type declarations, ' + 'and a full implementation. Add brief doc comments.' + sLineBreak +
+  'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak + '{DESC}'), (Name: 'Class Only';
+  Template: 'Write a single Delphi class (interface + implementation) based on the following description.' + sLineBreak +
+  'Wrap it in a minimal compilable unit. Add brief doc comments.' + sLineBreak + 'Return ONLY the Pascal source code, no explanation:' + sLineBreak + sLineBreak
+  + '{DESC}'), (Name: 'Interface + Stub'; Template: 'Write a Delphi unit with a fully declared interface section (types, method signatures) ' +
+  'and stub implementations (empty bodies with TODO comments) based on the description.' + sLineBreak + 'Return ONLY the Pascal source code, no explanation:' +
+  sLineBreak + sLineBreak + '{DESC}'), (Name: 'Unit Tests'; Template: 'Write a DUnitX test unit for a Delphi class described below.' + sLineBreak +
+  'Include [Test] methods covering the main scenarios and edge cases.' + sLineBreak + 'Return ONLY the Pascal source code, no explanation:' + sLineBreak +
+  sLineBreak + '{DESC}'), (Name: 'Free Prompt'; Template: '{DESC}'));
 
 constructor TNewUnitDialog.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FAIClient := TAIClient.Create;
   ComboProvider.ItemIndex := Ord(GSettings.Provider);
-  ListStyle.ItemIndex     := 0;
+  ListStyle.ItemIndex := 0;
   UpdateModelHint;
   ApplyIDETheme(Self);
 end;
@@ -119,11 +100,16 @@ end;
 procedure TNewUnitDialog.UpdateModelHint;
 begin
   case GSettings.Provider of
-    apClaude:  EditModel.Text := GSettings.ClaudeModel;
-    apOpenAI:  EditModel.Text := GSettings.OpenAIModel;
-    apOllama:  EditModel.Text := GSettings.OllamaModel;
-    apGroq:    EditModel.Text := GSettings.GroqModel;
-    apMistral: EditModel.Text := GSettings.MistralModel;
+    apClaude:
+      EditModel.Text := GSettings.ClaudeModel;
+    apOpenAI:
+      EditModel.Text := GSettings.OpenAIModel;
+    apOllama:
+      EditModel.Text := GSettings.OllamaModel;
+    apGroq:
+      EditModel.Text := GSettings.GroqModel;
+    apMistral:
+      EditModel.Text := GSettings.MistralModel;
   end;
 end;
 
@@ -135,11 +121,11 @@ end;
 
 procedure TNewUnitDialog.SetBusy(ABusy: Boolean);
 begin
-  BtnGenerate.Enabled   := not ABusy;
-  BtnStop.Enabled       := ABusy;
+  BtnGenerate.Enabled := not ABusy;
+  BtnStop.Enabled := ABusy;
   BtnCreateUnit.Enabled := (not ABusy) and (Trim(MemoResult.Text) <> '');
-  ProgressBar.Visible   := ABusy;
-  LabelStatus.Caption   := '';
+  ProgressBar.Visible := ABusy;
+  LabelStatus.Caption := '';
 end;
 
 procedure TNewUnitDialog.BtnStopClick(Sender: TObject);
@@ -151,11 +137,12 @@ end;
 
 function TNewUnitDialog.BuildPrompt: string;
 var
-  Idx : Integer;
+  Idx: Integer;
   Desc: string;
 begin
-  Idx  := ListStyle.ItemIndex;
-  if Idx < 0 then Idx := 0;
+  Idx := ListStyle.ItemIndex;
+  if Idx < 0 then
+    Idx := 0;
   Desc := Trim(MemoDesc.Text);
   Result := StringReplace(STYLES[Idx].Template, '{DESC}', Desc, [rfReplaceAll]);
 end;
@@ -171,57 +158,58 @@ begin
   end;
 
   case GSettings.Provider of
-    apClaude:  GSettings.ClaudeModel  := Trim(EditModel.Text);
-    apOpenAI:  GSettings.OpenAIModel  := Trim(EditModel.Text);
-    apOllama:  GSettings.OllamaModel  := Trim(EditModel.Text);
-    apGroq:    GSettings.GroqModel    := Trim(EditModel.Text);
-    apMistral: GSettings.MistralModel := Trim(EditModel.Text);
+    apClaude:
+      GSettings.ClaudeModel := Trim(EditModel.Text);
+    apOpenAI:
+      GSettings.OpenAIModel := Trim(EditModel.Text);
+    apOllama:
+      GSettings.OllamaModel := Trim(EditModel.Text);
+    apGroq:
+      GSettings.GroqModel := Trim(EditModel.Text);
+    apMistral:
+      GSettings.MistralModel := Trim(EditModel.Text);
   end;
 
-  Prompt           := BuildPrompt;
+  Prompt := BuildPrompt;
   SetBusy(True);
-  MemoResult.Text  := '';
-  FLastResult      := '';
+  MemoResult.Text := '';
+  FLastResult := '';
   LabelStatus.Caption := 'Generating - please wait...';
   Application.ProcessMessages;
 
-  FAIClient.SendAsync(Prompt, procedure(const AResult, AError: string)
-  begin
-    SetBusy(False);
-    if AError <> '' then
+  FAIClient.SendAsync(Prompt,
+    procedure(const AResult, AError: string)
     begin
-      LabelStatus.Caption := 'Error.';
-      ShowMessage('AI Error:' + sLineBreak + AError);
-      Exit;
-    end;
-    if Trim(AResult) = '' then
-    begin
-      LabelStatus.Caption := 'Empty response.';
-      ShowMessage('The AI returned an empty response.');
-      Exit;
-    end;
-    FLastResult         := AResult;
-    MemoResult.Text     := StringReplace(
-                             StringReplace(AResult, #13#10, #10, [rfReplaceAll]),
-                             #10, #13#10, [rfReplaceAll]);
-    BtnCreateUnit.Enabled := True;
-    LabelStatus.Caption := 'Done. Review and click "Create Unit in IDE".';
-  end);
+      SetBusy(False);
+      if AError <> '' then
+      begin
+        LabelStatus.Caption := 'Error.';
+        ShowMessage('AI Error:' + sLineBreak + AError);
+        Exit;
+      end;
+      if Trim(AResult) = '' then
+      begin
+        LabelStatus.Caption := 'Empty response.';
+        ShowMessage('The AI returned an empty response.');
+        Exit;
+      end;
+      FLastResult := AResult;
+      MemoResult.Text := StringReplace(StringReplace(AResult, #13#10, #10, [rfReplaceAll]), #10, #13#10, [rfReplaceAll]);
+      BtnCreateUnit.Enabled := True;
+      LabelStatus.Caption := 'Done. Review and click "Create Unit in IDE".';
+    end);
 end;
 
 procedure TNewUnitDialog.CreateIDEUnit(const ASource: string);
 var
   ActionSvc: IOTAActionServices;
-  TempFile : string;
-  SL       : TStringList;
+  TempFile: string;
+  SL: TStringList;
   Normalised: string;
 begin
-  Normalised := StringReplace(
-                  StringReplace(ASource, #13#10, #10, [rfReplaceAll]),
-                  #10, #13#10, [rfReplaceAll]);
+  Normalised := StringReplace(StringReplace(ASource, #13#10, #10, [rfReplaceAll]), #10, #13#10, [rfReplaceAll]);
 
-  TempFile := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) +
-              'CyAIAssistant_NewUnit.pas';
+  TempFile := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) + 'CyAIAssistant_NewUnit.pas';
   SL := TStringList.Create;
   try
     SL.Text := Normalised;
@@ -245,7 +233,7 @@ end;
 procedure TNewUnitDialog.BtnCreateUnitClick(Sender: TObject);
 var
   Src: string;
-  I  : Integer;
+  I: Integer;
 begin
   if Trim(FLastResult) <> '' then
     Src := FLastResult
@@ -259,7 +247,8 @@ begin
     Src := '';
     for I := 0 to MemoResult.Lines.Count - 1 do
     begin
-      if I > 0 then Src := Src + #13#10;
+      if I > 0 then
+        Src := Src + #13#10;
       Src := Src + MemoResult.Lines[I];
     end;
   end;
@@ -273,7 +262,7 @@ end;
 
 procedure TNewUnitDialog.MemoResultChange(Sender: TObject);
 begin
-  FLastResult := '';  // user edited — discard raw AI result
+  FLastResult := ''; // user edited — discard raw AI result
 end;
 
 procedure TNewUnitDialog.BtnCloseClick(Sender: TObject);

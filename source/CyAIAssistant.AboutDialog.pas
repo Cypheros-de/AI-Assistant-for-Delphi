@@ -1,14 +1,12 @@
 ﻿unit CyAIAssistant.AboutDialog;
 
-{
-  CyAIAssistant.AboutDialog.pas
-  About box: plugin name, file version, developer, GPL-2 and website links.
-  Link colors adapt to the active IDE theme:
-  Dark  theme → bright orange / sky-blue hover
-  Light theme → dark  orange / blue hover
-  Colors are re-applied after ApplyIDETheme (which resets all label font
-  colors to the theme foreground) via RestoreLinkColors.
-}
+// CyAIAssistant.AboutDialog.pas
+// About box: plugin name, file version, developer, GPL-2 and website links.
+// Link colors adapt to the active IDE theme:
+// Dark  theme → bright orange / sky-blue hover
+// Light theme → dark  orange / blue hover
+// Colors are re-applied after ApplyIDETheme (which resets all label font
+// colors to the theme foreground) via RestoreLinkColors.
 interface
 
 uses
@@ -55,7 +53,7 @@ begin
   ApplyIDETheme(Self);
 end;
 
-{ Link clicks }
+// Link clicks
 procedure TAboutDialog.LinkLicenseGPLClick(Sender: TObject);
 begin
   ShellExecute(0, 'open', 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.html', nil, nil, SW_SHOWNORMAL);
@@ -66,7 +64,7 @@ begin
   ShellExecute(0, 'open', 'https://www.cypheros.de', nil, nil, SW_SHOWNORMAL);
 end;
 
-{ Version string from BPL resource }
+// Version string from BPL resource
 function TAboutDialog.GetFileVersionString: string;
 var
   FileName: array [0 .. MAX_PATH] of Char;
