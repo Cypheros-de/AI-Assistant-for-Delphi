@@ -5,6 +5,7 @@
 /source/*.identcache
 /source/*.local
 /source/*.sync
+/source/*.dcu
 /lib
 /*.dcu
 /*.bak
