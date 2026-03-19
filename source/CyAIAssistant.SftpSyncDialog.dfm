@@ -10,10 +10,8 @@ object SftpSyncDialog: TSftpSyncDialog
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = True
   Position = poOwnerFormCenter
   OnClose = FormClose
-  PixelsPerInch = 96
   TextHeight = 15
   object PanelTop: TPanel
     Left = 0

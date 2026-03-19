@@ -59,12 +59,12 @@ uses
   System.SyncObjs, System.Threading, System.DateUtils,
   Winapi.Windows,
   Vcl.ExtCtrls,
-  ToolsAPI,
   SSHPascal.Ssh2Client,
   SSHPascal.SftpClient;
 
 type
-  TSftpLogEvent = reference to procedure(const AMsg: string);
+  TSftpLogEvent        = reference to procedure(const AMsg: string);
+  TSftpNotifyFileEvent = reference to procedure(const ALocalPath: string);
 
   // One entry in a file list
   TSyncFileInfo = record
@@ -99,8 +99,9 @@ type
     FStopEvent: THandle;
     FImmediateSync: THandle; // signalled by watcher -> trigger extra cycle
 
-    // -- Log ----------------------------------------------------------------
+    // -- Log / notifications ------------------------------------------------
     FOnLog: TSftpLogEvent;
+    FOnNotifyFile: TSftpNotifyFileEvent;
     FLogBuffer: TStringList;
     // Per-file cache of the last timestamp seen on BOTH sides after a sync.
     // Prevents re-syncing files that were just synced in the previous cycle.
@@ -124,7 +125,6 @@ type
     procedure UploadFile(const ARelPath: string; Sftp: ISftpClient);
     procedure DownloadFile(const ARelPath: string; Sftp: ISftpClient);
     procedure EnsureRemoteDir(const ARemoteDir: string; Sftp: ISftpClient);
-    procedure NotifyIDEIfOpen(const ALocalPath: string);
     procedure StartWatchThread;
     procedure StopWatchThread;
   public
@@ -147,6 +147,9 @@ type
 
     property LogBuffer: TStringList read FLogBuffer;
     property OnLog: TSftpLogEvent read FOnLog write FOnLog;
+    // Called on the main thread after each file is downloaded.
+    // Assign in the host to notify the IDE (or any other UI) that a file changed.
+    property OnNotifyFile: TSftpNotifyFileEvent read FOnNotifyFile write FOnNotifyFile;
     property BackupEnabled: Boolean read FBackupEnabled write FBackupEnabled;
     property RemoteQuietPeriodSecs: Integer read FRemoteQuietPeriodSecs write FRemoteQuietPeriodSecs;
     property IsBusy: Boolean read FSyncBusy;
@@ -1085,7 +1088,7 @@ begin
           TMainThreadRunner.Queue(
             procedure
             begin
-              NotifyIDEIfOpen(NotifyPath);
+              if Assigned(FOnNotifyFile) then FOnNotifyFile(NotifyPath);
             end);
         except
           on E: Exception do
@@ -1146,7 +1149,7 @@ begin
               TMainThreadRunner.Queue(
                 procedure
                 begin
-                  NotifyIDEIfOpen(NotifyPath);
+                  if Assigned(FOnNotifyFile) then FOnNotifyFile(NotifyPath);
                 end);
             except
               on E: Exception do
@@ -1197,7 +1200,7 @@ begin
             TMainThreadRunner.Queue(
               procedure
               begin
-                NotifyIDEIfOpen(NotifyPath);
+                if Assigned(FOnNotifyFile) then FOnNotifyFile(NotifyPath);
               end);
           except
             on E: Exception do
@@ -1331,34 +1334,6 @@ end;
 // ---------------------------------------------------------------------------
 // IDE notification
 // ---------------------------------------------------------------------------
-
-procedure TSftpSyncEngine.NotifyIDEIfOpen(const ALocalPath: string);
-var
-  ModSvc: IOTAModuleServices;
-  Module: IOTAModule;
-  I: Integer;
-  NormTarget: string;
-begin
-  if not Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then
-    Exit;
-  NormTarget := LowerCase(TPath.GetFullPath(ALocalPath));
-  for I := 0 to ModSvc.ModuleCount - 1 do
-  begin
-    Module := ModSvc.Modules[I];
-    if Module = nil then
-      Continue;
-    if LowerCase(TPath.GetFullPath(Module.FileName)) <> NormTarget then
-      Continue;
-    try
-      if Module.ModuleFileCount > 0 then
-        Module.ModuleFileEditors[0].Show;
-    except
-    end;
-    MessageDlg('[SYNC]  CyAI SFTP Sync' + sLineBreak + sLineBreak + '"' + TPath.GetFileName(ALocalPath) + '" was updated from the SFTP server.' + sLineBreak +
-      sLineBreak + 'Use  File -> Revert  to reload it from disk.', mtInformation, [mbOK], 0);
-    Exit;
-  end;
-end;
 
 // ---------------------------------------------------------------------------
 // Cache persistence

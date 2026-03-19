@@ -1,6 +1,7 @@
 /source/__recovery
 /source/__history
 /source/__backup
+/source/SftpSyncApp
 /source/*.identcache
 /source/*.local
 /source/*.sync

@@ -103,6 +103,7 @@ type
     StatusColor: Cardinal;
     procedure UpdateStatusUI;
     procedure OnSyncLog(const AMsg: string);
+    procedure NotifyIDEIfOpen(const ALocalPath: string);
     procedure LoadSettings;
     procedure SaveSettings;
     function GetActiveProjectPath: string;
@@ -175,6 +176,7 @@ begin
       MemoLog.Lines.Add(GSftpSync.LogBuffer[i]);
 
   GSftpSync.OnLog := OnSyncLog;
+  GSftpSync.OnNotifyFile := NotifyIDEIfOpen;
   UpdateStatusUI;
   ApplyIDETheme(Self);
 end;
@@ -184,7 +186,10 @@ begin
   // Only detach the log callback -- do NOT stop the engine.
   // Sync continues running in the background after the dialog is closed.
   if Assigned(GSftpSync) then
+  begin
     GSftpSync.OnLog := nil;
+    GSftpSync.OnNotifyFile := nil;
+  end;
   inherited;
 end;
 
@@ -225,6 +230,36 @@ begin
   // Always called on the main thread (TThread.Synchronize inside engine)
   MemoLog.Lines.Add(AMsg);
   SendMessage(MemoLog.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+end;
+
+procedure TSftpSyncDialog.NotifyIDEIfOpen(const ALocalPath: string);
+var
+  ModSvc: IOTAModuleServices;
+  Module: IOTAModule;
+  I: Integer;
+  NormTarget: string;
+begin
+  if not Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then
+    Exit;
+  NormTarget := LowerCase(TPath.GetFullPath(ALocalPath));
+  for I := 0 to ModSvc.ModuleCount - 1 do
+  begin
+    Module := ModSvc.Modules[I];
+    if Module = nil then
+      Continue;
+    if LowerCase(TPath.GetFullPath(Module.FileName)) <> NormTarget then
+      Continue;
+    try
+      if Module.ModuleFileCount > 0 then
+        Module.ModuleFileEditors[0].Show;
+    except
+    end;
+    MessageDlg('[SYNC]  CyAI SFTP Sync' + sLineBreak + sLineBreak +
+      '"' + TPath.GetFileName(ALocalPath) + '" was updated from the SFTP server.' + sLineBreak +
+      sLineBreak + 'Use  File -> Revert  to reload it from disk.',
+      mtInformation, [mbOK], 0);
+    Exit;
+  end;
 end;
 
 function TSftpSyncDialog.GetActiveProjectPath: string;
@@ -385,7 +420,7 @@ begin
     CheckIncludeSubDirs.Checked := Ini.ReadBool(CONFIG_SECTION, 'SubDirs', True);
     CheckAutoDetectProject.Checked := Ini.ReadBool(CONFIG_SECTION, 'AutoDetect', True);
     CheckStartWithProject.Checked := Ini.ReadBool(CONFIG_SECTION, 'AutoStart', False);
-    CheckBackupEnabled.Checked := Ini.ReadBool(CONFIG_SECTION, 'Backup', False);
+    CheckBackupEnabled.Checked := Ini.ReadBool(CONFIG_SECTION, 'Backup', True);
     EditQuietPeriod.Text := Ini.ReadString(CONFIG_SECTION, 'QuietPeriod', '60');
     SetPermissions(IntToPerms(Ini.ReadInteger(CONFIG_SECTION, 'Permissions', PermsToInt(DEFAULT_PERMISSIONS))));
     EditWatchedExts.Text := Ini.ReadString(CONFIG_SECTION, 'WatchedExts', '.pas .dfm .dpr .dpk .dproj .res .rc .txt .ini .xml');
@@ -787,9 +822,12 @@ end;
 
 procedure TSftpSyncDialog.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  // Detach log callback -- engine keeps running in background
+  // Detach callbacks -- engine keeps running in background
   if Assigned(GSftpSync) then
+  begin
     GSftpSync.OnLog := nil;
+    GSftpSync.OnNotifyFile := nil;
+  end;
   Action := caFree; // free the form instance on close
 end;
 
