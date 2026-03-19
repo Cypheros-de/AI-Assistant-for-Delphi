@@ -26,6 +26,7 @@ uses
 
 procedure RegisterIDEThemeForm(AFormClass: TCustomFormClass);
 procedure ApplyIDETheme(AForm: TCustomForm);
+function GetIDEThemeGetColor(aColor: TColor): TColor;
 
 function IDEThemeIsDark: Boolean;
 
@@ -91,8 +92,11 @@ end;
 procedure RegisterIDEThemeForm(AFormClass: TCustomFormClass);
 var
   ThemeSvc: IOTAIDEThemingServices;
+  ThemeSvc250: IOTAIDEThemingServices250;
 begin
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then   // Try the versioned interface first (Delphi 10.3+)
+    ThemeSvc250.RegisterFormClass(AFormClass)
+  else if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then    // Fall back to base interface
     ThemeSvc.RegisterFormClass(AFormClass);
 end;
 
@@ -101,17 +105,23 @@ var
   ThemeSvc: IOTAIDEThemingServices;
   ThemeSvc250: IOTAIDEThemingServices250;
 begin
-  // Try the versioned interface first (Delphi 10.3+)
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then
-  begin
-    ThemeSvc250.ApplyTheme(AForm);
-    Exit;
-  end;
-
-  // Fall back to base interface
-  if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then   // Try the versioned interface first (Delphi 10.3+)
+    ThemeSvc250.ApplyTheme(AForm)
+  else if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then    // Fall back to base interface
     ThemeSvc.ApplyTheme(AForm);
+end;
 
+function GetIDEThemeGetColor(aColor: TColor): TColor;
+var
+  ThemeSvc: IOTAIDEThemingServices;
+  ThemeSvc250: IOTAIDEThemingServices250;
+begin
+  if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then   // Try the versioned interface first (Delphi 10.3+)
+    Result := ThemeSvc250.StyleServices.GetSystemColor(aColor)
+  else if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then    // Fall back to base interface
+    Result := ThemeSvc.StyleServices.GetSystemColor(aColor)
+  else
+    Result := aColor;
 end;
 
 end.

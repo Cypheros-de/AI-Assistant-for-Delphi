@@ -110,6 +110,7 @@ begin
   ComboProvider.ItemIndex := Ord(GSettings.Provider);
   UpdateModelHint;
   ActiveControl := MemoInput;
+
   ApplyIDETheme(Self);
 end;
 
@@ -244,14 +245,21 @@ end;
 // ---------------------------------------------------------------------------
 procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean; AColor: TColor; AFontHeight: Integer = -25);
 begin
-  Rich.SelStart := MaxInt;
+  Rich.SelStart := Length(Rich.Text);
   Rich.SelLength := 0;
-  Rich.SelAttributes.Color := AColor;
+  // Style and Height are set before Color.
+  // Each SelAttributes setter does a GetAttributes / SetAttributes round-trip
+  // (EM_GETCHARFORMAT then EM_SETCHARFORMAT). After ApplyIDETheme the control's
+  // default format carries CFE_AUTOCOLOR; the Style setter reads that back and
+  // re-sends it, silently overwriting whatever Color we had just set.
+  // Setting Color last guarantees it is the active insertion-point format when
+  // EM_REPLACESEL fires.
   if ABold then
     Rich.SelAttributes.Style := [fsBold]
   else
     Rich.SelAttributes.Style := [];
   Rich.SelAttributes.Height := AFontHeight;
+  Rich.SelAttributes.Color := AColor;  // must be last
   Rich.SelText := AText + #13#10;
 end;
 
@@ -259,21 +267,24 @@ procedure TChatDialog.AppendHistory(const ARole, AText: string);
 const
   COLOR_YOU = $00E8A020; // amber -- [You] header
   COLOR_AI = $0040C080; // teal -- [AI] header
-  COLOR_TEXT = clWindowText;
 var
   HeaderColor: TColor;
   Formatted: string;
+  LTextColor: TColor;
 begin
   // Header line
   if SameText(ARole, 'You') then
     HeaderColor := COLOR_YOU
   else
     HeaderColor := COLOR_AI;
+
+  LTextColor := GetIDEThemeGetColor(clWindowText);
+
   RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -25);
 
   // Body text -- preprocessed
   Formatted := FormatAIText(AText);
-  RichAppend(RichHistory, Formatted, False, COLOR_TEXT, -23);
+  RichAppend(RichHistory, Formatted, False, LTextColor, -23);
 
   // Scroll to bottom
   SendMessage(RichHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);

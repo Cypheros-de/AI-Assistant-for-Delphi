@@ -483,18 +483,22 @@ object ChatDialog: TChatDialog
         Top = 15
         Width = 453
         Height = 454
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
         Align = alClient
         Font.Charset = ANSI_CHARSET
         Font.Color = clWindowText
-        Font.Height = -13
+        Font.Height = -10
         Font.Name = 'Segoe UI'
         Font.Style = []
-        HideSelection = False
         ParentFont = False
         ReadOnly = True
-        ScrollBars = ssVertical
+        ScrollBars = ssBoth
         TabOrder = 0
         WordWrap = False
+        StyleElements = [seClient, seBorder]
       end
     end
   end
