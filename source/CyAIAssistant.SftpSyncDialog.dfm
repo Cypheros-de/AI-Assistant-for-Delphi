@@ -162,7 +162,7 @@ object SftpSyncDialog: TSftpSyncDialog
     Margins.Top = 5
     Margins.Right = 5
     Margins.Bottom = 5
-    ActivePage = TabOptions
+    ActivePage = TabConnection
     Align = alClient
     TabOrder = 0
     object TabConnection: TTabSheet

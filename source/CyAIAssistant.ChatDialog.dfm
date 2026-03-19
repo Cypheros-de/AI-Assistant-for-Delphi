@@ -10,9 +10,7 @@ object ChatDialog: TChatDialog
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = True
   Position = poScreenCenter
-  PixelsPerInch = 96
   TextHeight = 15
   object PanelTop: TPanel
     Left = 0
@@ -496,8 +494,7 @@ object ChatDialog: TChatDialog
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 0
-        WantReturns = False
-        Zoom = 100
+        WordWrap = False
       end
     end
   end

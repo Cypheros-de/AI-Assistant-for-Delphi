@@ -1,4 +1,4 @@
-﻿object DiffViewerForm: TDiffViewerForm
+object DiffViewerForm: TDiffViewerForm
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Review Changes'
@@ -11,8 +11,7 @@
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
-  TextHeight = 25
-  PixelsPerInch = 96
+  TextHeight = 15
   object PanelTop: TPanel
     Left = 0
     Top = 0
@@ -46,7 +45,7 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      ExplicitWidth = 533
+      ExplicitWidth = 534
       ExplicitHeight = 25
     end
   end
@@ -63,13 +62,13 @@
     BevelOuter = bvNone
     TabOrder = 1
     DesignSize = (
-      1437
-      78)
+      958
+      52)
     object LabelStats: TLabel
       Left = 10
       Top = 18
-      Width = 89
-      Height = 17
+      Width = 91
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -149,18 +148,19 @@
         Left = 467
         Top = 0
         Width = 4
-        Height = 442
+        Height = 439
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
         ExplicitLeft = 783
+        ExplicitHeight = 442
       end
       object PanelOriginal: TPanel
         Left = 0
         Top = 0
         Width = 467
-        Height = 442
+        Height = 439
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -172,7 +172,7 @@
           Left = 0
           Top = 0
           Width = 467
-          Height = 17
+          Height = 15
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -186,13 +186,13 @@
           Font.Style = [fsBold]
           ParentFont = False
           Layout = tlCenter
-          ExplicitWidth = 84
+          ExplicitWidth = 80
         end
         object MemoOriginal: TMemo
           Left = 0
-          Top = 17
+          Top = 15
           Width = 467
-          Height = 425
+          Height = 424
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -213,8 +213,8 @@
       object PanelNew: TPanel
         Left = 471
         Top = 0
-        Width = 482
-        Height = 442
+        Width = 479
+        Height = 439
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -225,8 +225,8 @@
         object LabelNew: TLabel
           Left = 0
           Top = 0
-          Width = 482
-          Height = 17
+          Width = 479
+          Height = 15
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -240,13 +240,13 @@
           Font.Style = [fsBold]
           ParentFont = False
           Layout = tlCenter
-          ExplicitWidth = 114
+          ExplicitWidth = 112
         end
         object MemoNew: TMemo
           Left = 0
-          Top = 17
-          Width = 482
-          Height = 425
+          Top = 15
+          Width = 479
+          Height = 424
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -274,8 +274,8 @@
       object MemoDiff: TRichEdit
         Left = 0
         Top = 0
-        Width = 953
-        Height = 442
+        Width = 950
+        Height = 439
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -302,8 +302,8 @@
       object MemoAIEdit: TMemo
         Left = 0
         Top = 0
-        Width = 953
-        Height = 442
+        Width = 950
+        Height = 439
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5

@@ -1,4 +1,4 @@
-﻿object PromptDialog: TPromptDialog
+object PromptDialog: TPromptDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Code Assistant'
@@ -11,8 +11,7 @@
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
-  TextHeight = 25
-  PixelsPerInch = 96
+  TextHeight = 15
   object Splitter: TSplitter
     Left = 280
     Top = 94
@@ -38,6 +37,7 @@
     Color = 12607488
     ParentBackground = False
     TabOrder = 0
+    StyleElements = [seFont, seBorder]
     object LabelTitle: TLabel
       Left = 0
       Top = 0
@@ -56,8 +56,7 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      StyleElements = [seFont, seBorder]
-      ExplicitWidth = 538
+      ExplicitWidth = 536
       ExplicitHeight = 25
     end
   end
@@ -77,7 +76,7 @@
       Left = 10
       Top = 11
       Width = 47
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -88,7 +87,7 @@
       Left = 215
       Top = 11
       Width = 37
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -99,7 +98,7 @@
       Left = 70
       Top = 8
       Width = 130
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -118,7 +117,7 @@
       Left = 260
       Top = 8
       Width = 200
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -139,13 +138,13 @@
     BevelOuter = bvNone
     TabOrder = 2
     DesignSize = (
-      1350
-      72)
+      900
+      48)
     object LabelStatus: TLabel
       Left = 10
       Top = 16
       Width = 35
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -248,7 +247,7 @@
       Left = 0
       Top = 0
       Width = 280
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -262,13 +261,13 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      ExplicitWidth = 104
+      ExplicitWidth = 103
     end
     object LabelCustom: TLabel
       Left = 0
-      Top = 17
+      Top = 15
       Width = 280
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -282,11 +281,11 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      ExplicitWidth = 221
+      ExplicitWidth = 217
     end
     object ListPrompts: TListBox
       Left = 0
-      Top = 33
+      Top = 30
       Width = 280
       Height = 200
       Margins.Left = 5
@@ -294,15 +293,15 @@
       Margins.Right = 5
       Margins.Bottom = 5
       Align = alTop
-      ItemHeight = 25
+      ItemHeight = 15
       TabOrder = 0
       OnClick = ListPromptsClick
     end
     object MemoCustomPrefix: TMemo
       Left = 0
-      Top = 233
+      Top = 230
       Width = 280
-      Height = 231
+      Height = 234
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -335,7 +334,7 @@
       Left = 0
       Top = 0
       Width = 616
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -349,13 +348,13 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      ExplicitWidth = 205
+      ExplicitWidth = 202
     end
     object LabelFinal: TLabel
       Left = 0
-      Top = 17
+      Top = 15
       Width = 616
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -369,11 +368,11 @@
       Font.Style = [fsBold]
       ParentFont = False
       Layout = tlCenter
-      ExplicitWidth = 195
+      ExplicitWidth = 190
     end
     object MemoCode: TMemo
       Left = 0
-      Top = 33
+      Top = 30
       Width = 616
       Height = 200
       Margins.Left = 5
@@ -394,9 +393,9 @@
     end
     object MemoFinalPrompt: TMemo
       Left = 0
-      Top = 233
+      Top = 230
       Width = 616
-      Height = 231
+      Height = 234
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5

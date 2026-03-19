@@ -242,7 +242,7 @@ end;
 // ---------------------------------------------------------------------------
 // RichAppend  --  append styled text to RichHistory without flicker
 // ---------------------------------------------------------------------------
-procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean; AColor: TColor; AFontHeight: Integer = -12);
+procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean; AColor: TColor; AFontHeight: Integer = -25);
 begin
   Rich.SelStart := MaxInt;
   Rich.SelLength := 0;
@@ -252,7 +252,7 @@ begin
   else
     Rich.SelAttributes.Style := [];
   Rich.SelAttributes.Height := AFontHeight;
-  Rich.SelText := AText;
+  Rich.SelText := AText + #13#10;
 end;
 
 procedure TChatDialog.AppendHistory(const ARole, AText: string);
@@ -264,25 +264,16 @@ var
   HeaderColor: TColor;
   Formatted: string;
 begin
-  RichHistory.Lines.BeginUpdate;
-  try
-    // Header line
-    if SameText(ARole, 'You') then
-      HeaderColor := COLOR_YOU
-    else
-      HeaderColor := COLOR_AI;
+  // Header line
+  if SameText(ARole, 'You') then
+    HeaderColor := COLOR_YOU
+  else
+    HeaderColor := COLOR_AI;
+  RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -25);
 
-    RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -22);
-    RichAppend(RichHistory, #13#10, False, COLOR_TEXT);
-
-    // Body text -- preprocessed
-    Formatted := FormatAIText(AText);
-    RichAppend(RichHistory, Formatted, False, COLOR_TEXT, -20);
-    RichAppend(RichHistory, #13#10, False, COLOR_TEXT);
-
-  finally
-    RichHistory.Lines.EndUpdate;
-  end;
+  // Body text -- preprocessed
+  Formatted := FormatAIText(AText);
+  RichAppend(RichHistory, Formatted, False, COLOR_TEXT, -23);
 
   // Scroll to bottom
   SendMessage(RichHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);

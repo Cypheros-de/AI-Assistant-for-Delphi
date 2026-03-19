@@ -371,6 +371,7 @@ begin
     MemoDiff.SelStart := StartPos;
     MemoDiff.SelLength := 0;
     MemoDiff.SelAttributes.Color := FgColor;
+    MemoDiff.SelAttributes.Height := -25;
     MemoDiff.SelText := LineText + #13#10;
   end;
 end;

@@ -85,40 +85,6 @@ begin
 end;
 
 // ---------------------------------------------------------------------------
-// Internal: fix label/panel colors after ApplyTheme
-// ---------------------------------------------------------------------------
-
-procedure FixControlColors(AParent: TWinControl; const ThemeSvc: IOTAIDEThemingServices);
-var
-  I: Integer;
-  Ctrl: TControl;
-  BgColor: TColor;
-  FgColor: TColor;
-begin
-  BgColor := ThemeSvc.StyleServices.GetSystemColor(clWindow);
-  FgColor := ThemeSvc.StyleServices.GetSystemColor(clWindowText);
-
-  for I := 0 to AParent.ControlCount - 1 do
-  begin
-    Ctrl := AParent.Controls[I];
-
-    if Ctrl is TLabel then
-    begin
-      TLabel(Ctrl).Color := BgColor;
-      TLabel(Ctrl).Font.Color := FgColor;
-    end
-    else if Ctrl is TPanel then
-    begin
-      TPanel(Ctrl).Color := BgColor;
-      TPanel(Ctrl).Font.Color := FgColor;
-    end;
-
-    if (Ctrl is TWinControl) and (TWinControl(Ctrl).ControlCount > 0) then
-      FixControlColors(TWinControl(Ctrl), ThemeSvc);
-  end;
-end;
-
-// ---------------------------------------------------------------------------
 // Public: registration and application
 // ---------------------------------------------------------------------------
 
@@ -139,17 +105,13 @@ begin
   if Supports(BorlandIDEServices, IOTAIDEThemingServices250, ThemeSvc250) then
   begin
     ThemeSvc250.ApplyTheme(AForm);
-    if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then
-      FixControlColors(AForm, ThemeSvc);
     Exit;
   end;
 
   // Fall back to base interface
   if Supports(BorlandIDEServices, IOTAIDEThemingServices, ThemeSvc) then
-  begin
     ThemeSvc.ApplyTheme(AForm);
-    FixControlColors(AForm, ThemeSvc);
-  end;
+
 end;
 
 end.
