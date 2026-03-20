@@ -32,6 +32,8 @@ type
     procedure LinkLicenseGPLClick(Sender: TObject);
     procedure LinkSourceCodeClick(Sender: TObject);
     procedure LinkWebsiteClick(Sender: TObject);
+    procedure LinkMouseEnter(Sender: TObject);
+    procedure LinkMouseLeave(Sender: TObject);
   private
     function GetFileVersionString: string;
   public
@@ -50,6 +52,7 @@ constructor TAboutDialog.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   LabelVersion.Caption := 'Version: ' + GetFileVersionString;
+  RegisterIDEThemeForm(TAboutDialog);
   ApplyIDETheme(Self);
 end;
 
@@ -106,6 +109,17 @@ end;
 procedure TAboutDialog.LinkSourceCodeClick(Sender: TObject);
 begin
   ShellExecute(0, 'open', 'https://github.com/Cypheros-de/AI-Assistant-for-Delphi', nil, nil, SW_SHOWNORMAL);
+end;
+
+{ Mouse hover }
+procedure TAboutDialog.LinkMouseEnter(Sender: TObject);
+begin
+  (Sender as TLabel).Font.Color := GetIDEThemeGetColor(clWindowText);
+end;
+
+procedure TAboutDialog.LinkMouseLeave(Sender: TObject);
+begin
+  (Sender as TLabel).Font.Color := clBlue;
 end;
 
 end.

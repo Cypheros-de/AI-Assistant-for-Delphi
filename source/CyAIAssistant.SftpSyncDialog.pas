@@ -239,6 +239,15 @@ var
   I: Integer;
   NormTarget: string;
 begin
+  // Simulate an application deactivate/activate cycle so the Delphi IDE's
+  // built-in external-file-change check fires immediately, without waiting
+  // for the user to Alt-Tab away and back.  We post both messages so they
+  // are processed after this procedure returns (safe from main thread).
+  PostMessage(Application.Handle, WM_ACTIVATEAPP, WPARAM(False), GetCurrentThreadId);
+  PostMessage(Application.Handle, WM_ACTIVATEAPP, WPARAM(True),  GetCurrentThreadId);
+
+  // If the file is open in the editor, bring it to front so the IDE's
+  // reload prompt appears on the right tab.
   if not Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then
     Exit;
   NormTarget := LowerCase(TPath.GetFullPath(ALocalPath));
@@ -254,11 +263,7 @@ begin
         Module.ModuleFileEditors[0].Show;
     except
     end;
-    MessageDlg('[SYNC]  CyAI SFTP Sync' + sLineBreak + sLineBreak +
-      '"' + TPath.GetFileName(ALocalPath) + '" was updated from the SFTP server.' + sLineBreak +
-      sLineBreak + 'Use  File -> Revert  to reload it from disk.',
-      mtInformation, [mbOK], 0);
-    Exit;
+    Break;
   end;
 end;
 

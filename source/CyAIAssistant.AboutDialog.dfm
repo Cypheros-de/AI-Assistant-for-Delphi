@@ -11,12 +11,10 @@ object AboutDialog: TAboutDialog
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = True
   Position = poScreenCenter
   DesignSize = (
     400
     351)
-  PixelsPerInch = 96
   TextHeight = 15
   object LabelVersion: TLabel
     Left = 20
@@ -124,13 +122,18 @@ object AboutDialog: TAboutDialog
     Margins.Bottom = 5
     Anchors = [akLeft, akBottom]
     Caption = 'https://www.cypheros.de'
+    Color = clBtnFace
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -12
     Font.Name = 'Segoe UI'
     Font.Style = [fsBold, fsUnderline]
+    ParentColor = False
     ParentFont = False
+    StyleElements = []
     OnClick = LinkWebsiteClick
+    OnMouseEnter = LinkMouseEnter
+    OnMouseLeave = LinkMouseLeave
   end
   object LabelLicenseMITText: TLabel
     Left = 20

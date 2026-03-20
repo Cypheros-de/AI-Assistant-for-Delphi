@@ -243,50 +243,91 @@ end;
 // ---------------------------------------------------------------------------
 // RichAppend  --  append styled text to RichHistory without flicker
 // ---------------------------------------------------------------------------
-procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean; AColor: TColor; AFontHeight: Integer = -25);
+// AFontName = '' uses the control's default proportional font.
+// Pass a fixed font name (e.g. 'Courier New') for code blocks.
+//
+// Strategy: insert the text first, then select the entire inserted range and
+// apply all formatting to it.  Setting format at the insertion point before
+// EM_REPLACESEL only affects the first line; subsequent lines revert to the
+// control's default paragraph format.  Formatting the selection after
+// insertion covers every line uniformly.
+// Color is set last so it always clears CFE_AUTOCOLOR that ApplyIDETheme
+// leaves in the control's default character format.
+procedure RichAppend(Rich: TRichEdit; const AText: string; ABold: Boolean;
+  AColor: TColor; AFontHeight: Integer = -25; const AFontName: string = '');
+var
+  StartPos, EndPos: Integer;
 begin
-  Rich.SelStart := Length(Rich.Text);
+  Rich.SelStart := MaxInt; // clamp to end of content
+  StartPos := Rich.SelStart;
   Rich.SelLength := 0;
-  // Style and Height are set before Color.
-  // Each SelAttributes setter does a GetAttributes / SetAttributes round-trip
-  // (EM_GETCHARFORMAT then EM_SETCHARFORMAT). After ApplyIDETheme the control's
-  // default format carries CFE_AUTOCOLOR; the Style setter reads that back and
-  // re-sends it, silently overwriting whatever Color we had just set.
-  // Setting Color last guarantees it is the active insertion-point format when
-  // EM_REPLACESEL fires.
+  Rich.SelText := AText + #13#10; // insert; cursor lands at end of inserted text
+
+  EndPos := Rich.SelStart;
+
+  // Select the full inserted range and apply formatting to every character.
+  Rich.SelStart  := StartPos;
+  Rich.SelLength := EndPos - StartPos;
+
+  if AFontName <> '' then
+    Rich.SelAttributes.Name := AFontName
+  else
+    Rich.SelAttributes.Name := Rich.Font.Name; // restore after a code block
   if ABold then
     Rich.SelAttributes.Style := [fsBold]
   else
     Rich.SelAttributes.Style := [];
   Rich.SelAttributes.Height := AFontHeight;
-  Rich.SelAttributes.Color := AColor;  // must be last
-  Rich.SelText := AText + #13#10;
+  Rich.SelAttributes.Color := AColor; // must be last
 end;
 
 procedure TChatDialog.AppendHistory(const ARole, AText: string);
 const
   COLOR_YOU = $00E8A020; // amber -- [You] header
-  COLOR_AI = $0040C080; // teal -- [AI] header
+  COLOR_AI  = $0040C080; // teal  -- [AI]  header
+  CODE_FONT = 'Courier New';
 var
-  HeaderColor: TColor;
-  Formatted: string;
-  LTextColor: TColor;
+  HeaderColor, TextColor: TColor;
+  Segments: TArray<string>;
+  I: Integer;
+  IsCode: Boolean;
+  Seg, LangStrip: string;
+  NL: Integer;
 begin
-  // Header line
+  HeaderColor := COLOR_AI;
   if SameText(ARole, 'You') then
-    HeaderColor := COLOR_YOU
-  else
-    HeaderColor := COLOR_AI;
-
-  LTextColor := GetIDEThemeGetColor(clWindowText);
+    HeaderColor := COLOR_YOU;
+  TextColor := GetIDEThemeGetColor(clWindowText);
 
   RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -25);
 
-  // Body text -- preprocessed
-  Formatted := FormatAIText(AText);
-  RichAppend(RichHistory, Formatted, False, LTextColor, -23);
+  // Split on ``` fence markers; even-indexed segments are prose, odd are code.
+  Segments := AText.Split(['```']);
+  IsCode := False;
+  for I := 0 to High(Segments) do
+  begin
+    Seg := Segments[I];
+    if IsCode then
+    begin
+      // Strip optional language identifier on the opening line (e.g. "pascal").
+      LangStrip := Seg.TrimLeft;
+      NL := LangStrip.IndexOfAny([#13, #10]);
+      if (NL >= 0) and (NL < 20) and
+         (Trim(Copy(LangStrip, 1, NL)).IndexOfAny([' ', '.', ';', '(']) < 0) then
+        Seg := LangStrip.Substring(NL).TrimLeft([#13, #10]);
+      Seg := Seg.TrimRight([#13, #10, ' ']);
+      if Seg <> '' then
+        RichAppend(RichHistory, Seg, False, TextColor, -20, CODE_FONT);
+    end
+    else
+    begin
+      Seg := FormatAIText(Seg);
+      if Trim(Seg) <> '' then
+        RichAppend(RichHistory, Seg, False, TextColor, -23);
+    end;
+    IsCode := not IsCode;
+  end;
 
-  // Scroll to bottom
   SendMessage(RichHistory.Handle, WM_VSCROLL, SB_BOTTOM, 0);
 end;
 
