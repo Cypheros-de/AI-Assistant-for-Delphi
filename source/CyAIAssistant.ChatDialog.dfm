@@ -413,6 +413,7 @@ object ChatDialog: TChatDialog
               Margins.Right = 5
               Margins.Bottom = 5
               Caption = 'Save Selected...'
+              Enabled = False
               TabOrder = 0
               OnClick = BtnSaveSelectedClick
             end
@@ -439,6 +440,7 @@ object ChatDialog: TChatDialog
               Margins.Right = 5
               Margins.Bottom = 5
               Caption = 'Open in IDE'
+              Enabled = False
               TabOrder = 2
               OnClick = BtnOpenInIDEClick
             end
@@ -494,12 +496,25 @@ object ChatDialog: TChatDialog
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+        PopupMenu = PopupHistory
         ReadOnly = True
         ScrollBars = ssBoth
         TabOrder = 0
         WordWrap = False
         StyleElements = [seClient, seBorder]
       end
+    end
+  end
+  object PopupHistory: TPopupMenu
+    object MenuItemCopy: TMenuItem
+      Caption = 'Copy'
+      ShortCut = 16451
+      OnClick = MenuItemCopyClick
+    end
+    object MenuItemSelectAll: TMenuItem
+      Caption = 'Select All'
+      ShortCut = 16449
+      OnClick = MenuItemSelectAllClick
     end
   end
 end

@@ -1,4 +1,4 @@
-unit CyAIAssistant.ChatDialog;
+﻿unit CyAIAssistant.ChatDialog;
 
 // CyAIAssistant.ChatDialog.pas
 //
@@ -19,7 +19,7 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   Winapi.Windows, Winapi.Messages,
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
-  Vcl.Dialogs, Vcl.Graphics,
+  Vcl.Dialogs, Vcl.Graphics, Vcl.Menus, Vcl.Clipbrd,
   CyAIAssistant.Settings,
   CyAIAssistant.AIClient;
 
@@ -72,6 +72,8 @@ type
     procedure BtnSaveSelectedClick(Sender: TObject);
     procedure BtnSaveAllClick(Sender: TObject);
     procedure BtnOpenInIDEClick(Sender: TObject);
+    procedure MenuItemCopyClick(Sender: TObject);
+    procedure MenuItemSelectAllClick(Sender: TObject);
   private
     FAIClient: TAIClient;
     FHistory: TList<TChatMessage>;
@@ -79,7 +81,7 @@ type
     FBusy: Boolean;
     procedure SetBusy(ABusy: Boolean);
     procedure UpdateModelHint;
-    procedure AppendHistory(const ARole, AText: string);
+    procedure AppendHistory(const ARole, AText: string; const ADuration: TDateTime = 0);
     procedure ParseFilesFromResponse(const AResponse: string);
     procedure RefreshFileList;
     function SaveFileWithDialog(const AFile: TDetectedFile; const ADefaultDir: string): string;
@@ -281,7 +283,7 @@ begin
   Rich.SelAttributes.Color := AColor; // must be last
 end;
 
-procedure TChatDialog.AppendHistory(const ARole, AText: string);
+procedure TChatDialog.AppendHistory(const ARole, AText: string; const ADuration: TDateTime);
 const
   COLOR_YOU = $00E8A020; // amber -- [You] header
   COLOR_AI  = $0040C080; // teal  -- [AI]  header
@@ -299,7 +301,10 @@ begin
     HeaderColor := COLOR_YOU;
   TextColor := GetIDEThemeGetColor(clWindowText);
 
-  RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -25);
+  if (ARole = 'You') then
+    RichAppend(RichHistory, '[' + ARole + ']', True, HeaderColor, -25)
+  else
+    RichAppend(RichHistory, '[' + ARole + '] (' + IntToStr(Round(ADuration * 86400)) + 's)', True, HeaderColor, -25);
 
   // Split on ``` fence markers; even-indexed segments are prose, odd are code.
   Segments := AText.Split(['```']);
@@ -340,6 +345,7 @@ var
   UserText: string;
   Msg: TChatMessage;
   History: TArray<TChatMessage>;
+  LStartTime: TDateTime;
   i: Integer;
 begin
   if FBusy then
@@ -360,6 +366,7 @@ begin
 
   SetBusy(True);
   LabelStatus.Caption := 'Thinking...';
+  LStartTime := now;
 
   FAIClient.SendChatAsync(History,
     procedure(const AResult, AError: string)
@@ -379,7 +386,7 @@ begin
       AssistantMsg.Content := AResult;
       FHistory.Add(AssistantMsg);
 
-      AppendHistory('AI', AResult);
+      AppendHistory('AI', AResult, Now - LStartTime);
 
       ParseFilesFromResponse(AResult);
       RefreshFileList;
@@ -538,6 +545,7 @@ end;
 procedure TChatDialog.RefreshFileList;
 var
   i, SelIdx: Integer;
+  HasSel: Boolean;
 begin
   SelIdx := ListFiles.ItemIndex;
   ListFiles.Clear;
@@ -545,14 +553,21 @@ begin
     ListFiles.Items.Add(FDetectedFiles[i].FileName);
   if (SelIdx >= 0) and (SelIdx < ListFiles.Count) then
     ListFiles.ItemIndex := SelIdx;
+  HasSel := ListFiles.ItemIndex >= 0;
+  BtnSaveSelected.Enabled := HasSel;
+  BtnOpenInIDE.Enabled    := HasSel;
 end;
 
 procedure TChatDialog.ListFilesClick(Sender: TObject);
 var
   Idx: Integer;
+  HasSel: Boolean;
 begin
   Idx := ListFiles.ItemIndex;
-  if (Idx < 0) or (Idx >= FDetectedFiles.Count) then
+  HasSel := (Idx >= 0) and (Idx < FDetectedFiles.Count);
+  BtnSaveSelected.Enabled := HasSel;
+  BtnOpenInIDE.Enabled    := HasSel;
+  if not HasSel then
   begin
     MemoFilePreview.Clear;
     Exit;
@@ -640,23 +655,6 @@ begin
   ShowMessage(Format('%d of %d file(s) saved to:' + sLineBreak + Dir, [Saved, FDetectedFiles.Count]));
 end;
 
-procedure TChatDialog.BtnOpenInIDEClick(Sender: TObject);
-var
-  Idx: Integer;
-  Path: string;
-begin
-  Idx := ListFiles.ItemIndex;
-  if (Idx < 0) or (Idx >= FDetectedFiles.Count) then
-  begin
-    ShowMessage('Please select a file from the list first.');
-    Exit;
-  end;
-  Path := SaveFileWithDialog(FDetectedFiles[Idx], '');
-  if Path = '' then
-    Exit;
-  OpenFileInIDE(Path);
-end;
-
 procedure TChatDialog.OpenFileInIDE(const APath: string);
 var
   ActionSvc: IOTAActionServices;
@@ -667,6 +665,180 @@ begin
     Exit;
   end;
   ActionSvc.OpenFile(APath);
+end;
+
+// ---------------------------------------------------------------------------
+// IOTAFile implementation — supplies source text to the module creator.
+// ---------------------------------------------------------------------------
+type
+  TSourceContent = class(TInterfacedObject, IOTAFile)
+  private
+    FSource: string;
+  public
+    constructor Create(const ASource: string);
+    function GetSource: string;
+    function GetAge: TDateTime;
+  end;
+
+constructor TSourceContent.Create(const ASource: string);
+begin
+  inherited Create;
+  FSource := ASource;
+end;
+
+function TSourceContent.GetSource: string;
+begin
+  Result := FSource;
+end;
+
+function TSourceContent.GetAge: TDateTime;
+begin
+  Result := -1; // no file on disk
+end;
+
+// ---------------------------------------------------------------------------
+// IOTAModuleCreator implementation — creates a new unnamed source buffer.
+// ---------------------------------------------------------------------------
+type
+  TNewUnitCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
+  private
+    FFileName: string;
+    FSource: string;
+  public
+    constructor Create(const AFileName, ASource: string);
+    // IOTACreator
+    function GetCreatorType: string;
+    function GetExisting: Boolean;
+    function GetFileSystem: string;
+    function GetOwner: IOTAModule;
+    function GetUnnamed: Boolean;
+    // IOTAModuleCreator
+    function GetAncestorName: string;
+    function GetImplFileName: string;
+    function GetIntfFileName: string;
+    function GetFormName: string;
+    function GetMainForm: Boolean;
+    function GetShowForm: Boolean;
+    function GetShowSource: Boolean;
+    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    procedure FormCreated(const FormEditor: IOTAFormEditor);
+  end;
+
+constructor TNewUnitCreator.Create(const AFileName, ASource: string);
+begin
+  inherited Create;
+  FFileName := AFileName;
+  FSource   := ASource;
+end;
+
+function TNewUnitCreator.GetCreatorType: string;
+begin
+  Result := sUnit;
+end;
+
+function TNewUnitCreator.GetExisting: Boolean;
+begin
+  Result := False;
+end;
+
+function TNewUnitCreator.GetFileSystem: string;
+begin
+  Result := '';
+end;
+
+function TNewUnitCreator.GetOwner: IOTAModule;
+begin
+  Result := nil; // not added to any project
+end;
+
+function TNewUnitCreator.GetUnnamed: Boolean;
+begin
+  Result := True; // unsaved — no path on disk
+end;
+
+function TNewUnitCreator.GetAncestorName: string;
+begin
+  Result := '';
+end;
+
+function TNewUnitCreator.GetImplFileName: string;
+begin
+  Result := ''; // let the IDE assign a unique name (Unit1, Unit2, ...)
+end;
+
+function TNewUnitCreator.GetIntfFileName: string;
+begin
+  Result := '';
+end;
+
+function TNewUnitCreator.GetFormName: string;
+begin
+  Result := '';
+end;
+
+function TNewUnitCreator.GetMainForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TNewUnitCreator.GetShowForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TNewUnitCreator.GetShowSource: Boolean;
+begin
+  Result := True;
+end;
+
+function TNewUnitCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil; // source-only unit, no form
+end;
+
+function TNewUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := TSourceContent.Create(FSource);
+end;
+
+function TNewUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil; // Pascal unit has no separate interface file
+end;
+
+procedure TNewUnitCreator.FormCreated(const FormEditor: IOTAFormEditor);
+begin
+  // no form
+end;
+
+procedure TChatDialog.BtnOpenInIDEClick(Sender: TObject);
+var
+  Idx: Integer;
+  DF: TDetectedFile;
+  ModSvc: IOTAModuleServices;
+begin
+  Idx := ListFiles.ItemIndex;
+  if (Idx < 0) or (Idx >= FDetectedFiles.Count) then
+  begin
+    ShowMessage('Please select a file from the list first.');
+    Exit;
+  end;
+  DF := FDetectedFiles[Idx];
+  if Supports(BorlandIDEServices, IOTAModuleServices, ModSvc) then
+    ModSvc.CreateModule(TNewUnitCreator.Create(DF.FileName, DF.Content));
+end;
+
+procedure TChatDialog.MenuItemCopyClick(Sender: TObject);
+begin
+  if RichHistory.SelLength > 0 then
+    Clipboard.AsText := RichHistory.SelText;
+end;
+
+procedure TChatDialog.MenuItemSelectAllClick(Sender: TObject);
+begin
+  RichHistory.SelectAll;
 end;
 
 end.
