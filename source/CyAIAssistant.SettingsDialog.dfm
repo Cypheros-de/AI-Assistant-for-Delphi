@@ -1,4 +1,4 @@
-﻿object SettingsDialog: TSettingsDialog
+object SettingsDialog: TSettingsDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Settings'
@@ -11,8 +11,7 @@
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
-  TextHeight = 25
-  PixelsPerInch = 96
+  TextHeight = 15
   object PanelBottom: TPanel
     Left = 0
     Top = 311
@@ -26,8 +25,8 @@
     BevelOuter = bvNone
     TabOrder = 0
     DesignSize = (
-      1050
-      72)
+      700
+      48)
     object BtnOK: TButton
       Left = 495
       Top = 9
@@ -82,7 +81,7 @@
         Left = 16
         Top = 20
         Width = 43
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -93,7 +92,7 @@
         Left = 16
         Top = 57
         Width = 37
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -104,7 +103,7 @@
         Left = 16
         Top = 93
         Width = 72
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -114,8 +113,8 @@
       object LblClaudeInfo: TLabel
         Left = 16
         Top = 132
-        Width = 451
-        Height = 33
+        Width = 450
+        Height = 30
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -140,7 +139,7 @@
         Left = 200
         Top = 17
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -152,7 +151,7 @@
         Left = 200
         Top = 54
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -171,7 +170,7 @@
         Left = 200
         Top = 90
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -189,7 +188,7 @@
         Left = 16
         Top = 20
         Width = 43
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -200,7 +199,7 @@
         Left = 16
         Top = 57
         Width = 37
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -211,7 +210,7 @@
         Left = 16
         Top = 93
         Width = 72
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -221,8 +220,8 @@
       object LblOpenAIInfo: TLabel
         Left = 16
         Top = 132
-        Width = 257
-        Height = 17
+        Width = 258
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -244,7 +243,7 @@
         Left = 200
         Top = 17
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -256,7 +255,7 @@
         Left = 200
         Top = 54
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -273,7 +272,7 @@
         Left = 200
         Top = 90
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -291,7 +290,7 @@
         Left = 16
         Top = 20
         Width = 75
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -302,7 +301,7 @@
         Left = 16
         Top = 57
         Width = 37
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -312,8 +311,8 @@
       object LblOllamaInfo: TLabel
         Left = 16
         Top = 135
-        Width = 407
-        Height = 50
+        Width = 406
+        Height = 45
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -327,7 +326,7 @@
         Left = 200
         Top = 17
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -338,25 +337,12 @@
         Left = 200
         Top = 54
         Width = 280
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
         TabOrder = 1
-      end
-      object BtnLoadModels: TButton
-        Left = 490
-        Top = 53
-        Width = 130
-        Height = 26
-        Margins.Left = 5
-        Margins.Top = 5
-        Margins.Right = 5
-        Margins.Bottom = 5
-        Caption = 'Load Models'
-        TabOrder = 2
-        OnClick = BtnLoadModelsClick
       end
       object BtnTestOllama: TButton
         Left = 200
@@ -368,7 +354,7 @@
         Margins.Right = 5
         Margins.Bottom = 5
         Caption = 'Test Connection'
-        TabOrder = 3
+        TabOrder = 2
         OnClick = BtnTestOllamaClick
       end
     end
@@ -382,7 +368,7 @@
         Left = 16
         Top = 20
         Width = 43
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -393,7 +379,7 @@
         Left = 16
         Top = 57
         Width = 37
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -404,7 +390,7 @@
         Left = 16
         Top = 93
         Width = 72
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -415,7 +401,7 @@
         Left = 16
         Top = 132
         Width = 242
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -437,7 +423,7 @@
         Left = 200
         Top = 17
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -449,7 +435,7 @@
         Left = 200
         Top = 54
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -466,7 +452,7 @@
         Left = 200
         Top = 90
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -484,7 +470,7 @@
         Left = 16
         Top = 20
         Width = 43
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -495,7 +481,7 @@
         Left = 16
         Top = 57
         Width = 37
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -506,7 +492,7 @@
         Left = 16
         Top = 93
         Width = 72
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -516,8 +502,8 @@
       object LblMistralInfo: TLabel
         Left = 16
         Top = 132
-        Width = 237
-        Height = 17
+        Width = 238
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -539,7 +525,7 @@
         Left = 200
         Top = 17
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -551,7 +537,7 @@
         Left = 200
         Top = 54
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -568,7 +554,7 @@
         Left = 200
         Top = 90
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -586,7 +572,7 @@
         Left = 16
         Top = 23
         Width = 88
-        Height = 17
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -596,8 +582,8 @@
       object LblMaxTokens: TLabel
         Left = 16
         Top = 59
-        Width = 64
-        Height = 17
+        Width = 65
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -607,8 +593,8 @@
       object LblTemperature: TLabel
         Left = 16
         Top = 95
-        Width = 68
-        Height = 17
+        Width = 70
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -618,8 +604,8 @@
       object LblGeneralInfo: TLabel
         Left = 16
         Top = 135
-        Width = 357
-        Height = 33
+        Width = 359
+        Height = 30
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -632,7 +618,7 @@
         Left = 200
         Top = 20
         Width = 200
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -650,7 +636,7 @@
         Left = 200
         Top = 56
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -661,7 +647,7 @@
         Left = 200
         Top = 92
         Width = 440
-        Height = 22
+        Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -679,7 +665,7 @@
         Left = 0
         Top = 0
         Width = 220
-        Height = 285
+        Height = 281
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -691,7 +677,7 @@
           Left = 0
           Top = 0
           Width = 220
-          Height = 17
+          Height = 15
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -705,25 +691,25 @@
           Font.Style = [fsBold]
           ParentFont = False
           Layout = tlCenter
-          ExplicitWidth = 109
+          ExplicitWidth = 108
         end
         object ListCustomPrompts: TListBox
           Left = 0
-          Top = 17
+          Top = 15
           Width = 220
-          Height = 232
+          Height = 230
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
           Margins.Bottom = 5
           Align = alClient
-          ItemHeight = 25
+          ItemHeight = 15
           TabOrder = 0
           OnClick = ListCustomPromptsClick
         end
         object PanelListBtns: TPanel
           Left = 0
-          Top = 249
+          Top = 245
           Width = 220
           Height = 36
           Margins.Left = 5
@@ -777,8 +763,8 @@
       object PanelPromptsRight: TPanel
         Left = 220
         Top = 0
-        Width = 475
-        Height = 285
+        Width = 472
+        Height = 281
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -789,7 +775,7 @@
         object PanelPromptTop: TPanel
           Left = 0
           Top = 0
-          Width = 475
+          Width = 472
           Height = 62
           Margins.Left = 5
           Margins.Top = 5
@@ -799,13 +785,13 @@
           BevelOuter = bvNone
           TabOrder = 0
           DesignSize = (
-            712
-            93)
+            472
+            62)
           object LblPromptName: TLabel
             Left = 8
             Top = 12
-            Width = 77
-            Height = 17
+            Width = 78
+            Height = 15
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -815,8 +801,8 @@
           object LblTemplate: TLabel
             Left = 8
             Top = 40
-            Width = 375
-            Height = 17
+            Width = 377
+            Height = 15
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -828,8 +814,8 @@
           object EditPromptName: TEdit
             Left = 120
             Top = 9
-            Width = 345
-            Height = 22
+            Width = 342
+            Height = 23
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -840,8 +826,8 @@
         end
         object PanelPromptBtns: TPanel
           Left = 0
-          Top = 245
-          Width = 475
+          Top = 241
+          Width = 472
           Height = 40
           Margins.Left = 5
           Margins.Top = 5
@@ -893,8 +879,8 @@
         object MemoPromptTemplate: TMemo
           Left = 0
           Top = 62
-          Width = 475
-          Height = 183
+          Width = 472
+          Height = 179
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5

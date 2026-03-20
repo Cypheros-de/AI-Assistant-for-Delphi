@@ -41,7 +41,6 @@ type
     LblOllamaInfo: TLabel;
     EditOllamaEndpoint: TEdit;
     ComboOllamaModel: TComboBox;
-    BtnLoadModels: TButton;
     BtnTestOllama: TButton;
     TabGroq: TTabSheet;
     LblGroqKey: TLabel;
@@ -95,12 +94,12 @@ type
     procedure BtnMoveUpClick(Sender: TObject);
     procedure BtnMoveDownClick(Sender: TObject);
     procedure BtnClearFieldsClick(Sender: TObject);
-    procedure BtnLoadModelsClick(Sender: TObject);
     procedure BtnTestOllamaClick(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
     procedure RefreshPromptList;
+    procedure LoadOllamaModels(ASilent: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -141,6 +140,9 @@ begin
   EditTemperature.Text := FormatFloat('0.00', GSettings.Temperature);
   ComboDefaultProvider.ItemIndex := Ord(GSettings.Provider);
   RefreshPromptList;
+  // Auto-populate Ollama model list if the server is reachable; errors are
+  // silently ignored so the dialog opens instantly when Ollama is not running.
+  LoadOllamaModels(True);
 end;
 
 procedure TSettingsDialog.SaveSettings;
@@ -294,7 +296,7 @@ begin
     SetLength(Result, Length(Result) - 1);
 end;
 
-procedure TSettingsDialog.BtnLoadModelsClick(Sender: TObject);
+procedure TSettingsDialog.LoadOllamaModels(ASilent: Boolean);
 var
   HTTP: THTTPClient;
   Response: IHTTPResponse;
@@ -309,36 +311,37 @@ begin
   BaseURL := Trim(EditOllamaEndpoint.Text);
   if BaseURL = '' then
   begin
-    ShowMessage('Please enter the Ollama endpoint URL first.');
+    if not ASilent then
+      ShowMessage('Please enter the Ollama endpoint URL first.');
     Exit;
   end;
   BaseURL := GetOllamaBaseURL(BaseURL);
   PrevModel := Trim(ComboOllamaModel.Text);
-  BtnLoadModels.Enabled := False;
-  BtnLoadModels.Caption := 'Loading...';
-  Application.ProcessMessages;
   HTTP := THTTPClient.Create;
   try
-    HTTP.ConnectionTimeout := 5000;
-    HTTP.ResponseTimeout := 15000;
+    HTTP.ConnectionTimeout := 3000;
+    HTTP.ResponseTimeout := 8000;
     try
       Response := HTTP.Get(BaseURL + '/api/tags');
       if Response.StatusCode <> 200 then
       begin
-        ShowMessage('Ollama returned HTTP ' + IntToStr(Response.StatusCode));
+        if not ASilent then
+          ShowMessage('Ollama returned HTTP ' + IntToStr(Response.StatusCode));
         Exit;
       end;
       JSON := TJSONObject.ParseJSONValue(Response.ContentAsString(TEncoding.UTF8)) as TJSONObject;
       if JSON = nil then
       begin
-        ShowMessage('Could not parse Ollama response.');
+        if not ASilent then
+          ShowMessage('Could not parse Ollama response.');
         Exit;
       end;
       try
         Models := JSON.GetValue('models') as TJSONArray;
         if (Models = nil) or (Models.Count = 0) then
         begin
-          ShowMessage('No models found. Pull a model first:' + sLineBreak + '  ollama pull codellama');
+          if not ASilent then
+            ShowMessage('No models found. Pull a model first:' + sLineBreak + '  ollama pull codellama');
           Exit;
         end;
         ComboOllamaModel.Items.BeginUpdate;
@@ -365,18 +368,19 @@ begin
           else
             ComboOllamaModel.ItemIndex := 0;
         end;
-        ShowMessage(IntToStr(ComboOllamaModel.Items.Count) + ' model(s) loaded from Ollama.');
+        if not ASilent then
+          ShowMessage(IntToStr(ComboOllamaModel.Items.Count) + ' model(s) loaded from Ollama.');
       finally
         JSON.Free;
       end;
     except
       on E: Exception do
-        ShowMessage('ERROR: Cannot reach Ollama:' + sLineBreak + E.Message + sLineBreak + sLineBreak + 'Is Ollama running? Try: ollama serve');
+        if not ASilent then
+          ShowMessage('ERROR: Cannot reach Ollama:' + sLineBreak + E.Message +
+            sLineBreak + sLineBreak + 'Is Ollama running? Try: ollama serve');
     end;
   finally
     HTTP.Free;
-    BtnLoadModels.Enabled := True;
-    BtnLoadModels.Caption := 'Load Models';
   end;
 end;
 
