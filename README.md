@@ -100,6 +100,8 @@ All SFTP settings are stored in `CyAiAssistant.sync` in the project folder — n
 | Watched extensions | Which file types to sync (space or comma separated, e.g. `.pas .dfm .dproj`) |
 | Remote file permissions | Unix permission bits applied to uploaded files and created directories |
 
+![](https://github.com/Cypheros-de/AI-Assistant-for-Delphi/blob/main/media/sftp_sync.png)
+
 ---
 
 ### Settings Dialog
