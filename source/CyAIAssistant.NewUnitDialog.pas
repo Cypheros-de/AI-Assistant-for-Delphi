@@ -237,7 +237,7 @@ begin
       FLastResult := AResult;
       MemoResult.Text := StringReplace(StringReplace(AResult, #13#10, #10, [rfReplaceAll]), #10, #13#10, [rfReplaceAll]);
       BtnCreateUnit.Enabled := True;
-      LabelStatus.Caption := 'Done. Review and click "Create Unit in IDE".';
+      LabelStatus.Caption := '';
     end);
 end;
 
