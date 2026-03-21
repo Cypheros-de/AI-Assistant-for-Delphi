@@ -33,6 +33,8 @@ Select any code in the editor, open the Code Assistant, and apply an AI transfor
 - **Apply or discard** — one click to apply the result to the editor, or close without touching your code
 - Menu entry is only enabled when a source file is open in the editor
 
+![](https://github.com/Cypheros-de/AI-Assistant-for-Delphi/blob/main/media/code_assistant.png)
+
 ---
 
 ### AI Chat — Multi-Turn Conversation
