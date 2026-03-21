@@ -211,7 +211,7 @@ object AboutDialog: TAboutDialog
     Left = 0
     Top = 0
     Width = 400
-    Height = 56
+    Height = 52
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5

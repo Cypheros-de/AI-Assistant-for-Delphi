@@ -5,6 +5,8 @@ object ChatDialog: TChatDialog
   ClientHeight = 513
   ClientWidth = 918
   Color = clBtnFace
+  Constraints.MinHeight = 200
+  Constraints.MinWidth = 500
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -16,7 +18,7 @@ object ChatDialog: TChatDialog
     Left = 0
     Top = 0
     Width = 918
-    Height = 44
+    Height = 52
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -24,15 +26,17 @@ object ChatDialog: TChatDialog
     Align = alTop
     BevelOuter = bvNone
     Color = 12607488
+    DoubleBuffered = True
+    Padding.Top = 1
+    Padding.Right = 1
+    Padding.Bottom = 1
     ParentBackground = False
+    ParentDoubleBuffered = False
     TabOrder = 0
     StyleElements = [seFont, seBorder]
-    DesignSize = (
-      918
-      44)
     object LabelTitle: TLabel
       Left = 12
-      Top = 6
+      Top = 11
       Width = 69
       Height = 28
       Margins.Left = 5
@@ -50,7 +54,7 @@ object ChatDialog: TChatDialog
     end
     object LabelProvider: TLabel
       Left = 160
-      Top = 14
+      Top = 19
       Width = 47
       Height = 15
       Margins.Left = 5
@@ -67,7 +71,7 @@ object ChatDialog: TChatDialog
     end
     object LabelModel: TLabel
       Left = 336
-      Top = 14
+      Top = 19
       Width = 37
       Height = 15
       Margins.Left = 5
@@ -82,9 +86,19 @@ object ChatDialog: TChatDialog
       Font.Style = []
       ParentFont = False
     end
+    object PaintBox1: TPaintBox
+      Left = 737
+      Top = 1
+      Width = 180
+      Height = 50
+      Align = alRight
+      OnPaint = PaintBox1Paint
+      ExplicitLeft = 757
+      ExplicitHeight = 54
+    end
     object ComboProvider: TComboBox
       Left = 225
-      Top = 10
+      Top = 15
       Width = 100
       Height = 23
       Margins.Left = 5
@@ -103,8 +117,8 @@ object ChatDialog: TChatDialog
     end
     object EditModel: TEdit
       Left = 385
-      Top = 10
-      Width = 200
+      Top = 15
+      Width = 100
       Height = 23
       Margins.Left = 5
       Margins.Top = 5
@@ -113,26 +127,12 @@ object ChatDialog: TChatDialog
       ReadOnly = True
       TabOrder = 1
     end
-    object BtnNewChat: TButton
-      Left = 814
-      Top = 9
-      Width = 90
-      Height = 26
-      Margins.Left = 5
-      Margins.Top = 5
-      Margins.Right = 5
-      Margins.Bottom = 5
-      Anchors = [akTop, akRight]
-      Caption = 'New Chat'
-      TabOrder = 2
-      OnClick = BtnNewChatClick
-    end
   end
   object PanelMain: TPanel
     Left = 0
-    Top = 44
+    Top = 52
     Width = 918
-    Height = 469
+    Height = 461
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -144,7 +144,7 @@ object ChatDialog: TChatDialog
       Left = 460
       Top = 0
       Width = 5
-      Height = 469
+      Height = 461
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -155,7 +155,7 @@ object ChatDialog: TChatDialog
       Left = 0
       Top = 0
       Width = 460
-      Height = 469
+      Height = 461
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -167,7 +167,7 @@ object ChatDialog: TChatDialog
         Left = 0
         Top = 0
         Width = 460
-        Height = 469
+        Height = 461
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -205,7 +205,7 @@ object ChatDialog: TChatDialog
             Left = 0
             Top = 15
             Width = 452
-            Height = 376
+            Height = 368
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -222,7 +222,7 @@ object ChatDialog: TChatDialog
           end
           object PanelChatBtns: TPanel
             Left = 0
-            Top = 391
+            Top = 383
             Width = 452
             Height = 48
             Margins.Left = 5
@@ -232,25 +232,6 @@ object ChatDialog: TChatDialog
             Align = alBottom
             BevelOuter = bvNone
             TabOrder = 1
-            object LabelStatus: TLabel
-              Left = 340
-              Top = 31
-              Width = 100
-              Height = 17
-              Margins.Left = 5
-              Margins.Top = 5
-              Margins.Right = 5
-              Margins.Bottom = 5
-              Alignment = taCenter
-              AutoSize = False
-              Caption = ' '
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindowText
-              Font.Height = -11
-              Font.Name = 'Segoe UI'
-              Font.Style = []
-              ParentFont = False
-            end
             object BtnSend: TButton
               Left = 8
               Top = 9
@@ -291,19 +272,6 @@ object ChatDialog: TChatDialog
               TabOrder = 2
               OnClick = BtnClearInputClick
             end
-            object ProgressBar: TProgressBar
-              Left = 340
-              Top = 16
-              Width = 100
-              Height = 16
-              Margins.Left = 5
-              Margins.Top = 5
-              Margins.Right = 5
-              Margins.Bottom = 5
-              Style = pbstMarquee
-              TabOrder = 3
-              Visible = False
-            end
           end
         end
         object TabFiles: TTabSheet
@@ -317,7 +285,7 @@ object ChatDialog: TChatDialog
             Left = 200
             Top = 0
             Width = 5
-            Height = 391
+            Height = 383
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -328,7 +296,7 @@ object ChatDialog: TChatDialog
             Left = 0
             Top = 0
             Width = 200
-            Height = 391
+            Height = 383
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -359,7 +327,7 @@ object ChatDialog: TChatDialog
               Left = 0
               Top = 15
               Width = 200
-              Height = 376
+              Height = 368
               Margins.Left = 5
               Margins.Top = 5
               Margins.Right = 5
@@ -374,7 +342,7 @@ object ChatDialog: TChatDialog
             Left = 205
             Top = 0
             Width = 247
-            Height = 391
+            Height = 383
             Margins.Left = 5
             Margins.Top = 5
             Margins.Right = 5
@@ -393,7 +361,7 @@ object ChatDialog: TChatDialog
           end
           object PanelFileBtns: TPanel
             Left = 0
-            Top = 391
+            Top = 383
             Width = 452
             Height = 48
             Margins.Left = 5
@@ -452,7 +420,7 @@ object ChatDialog: TChatDialog
       Left = 465
       Top = 0
       Width = 453
-      Height = 469
+      Height = 461
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -484,7 +452,7 @@ object ChatDialog: TChatDialog
         Left = 0
         Top = 15
         Width = 453
-        Height = 454
+        Height = 398
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -502,6 +470,69 @@ object ChatDialog: TChatDialog
         TabOrder = 0
         WordWrap = False
         StyleElements = [seClient, seBorder]
+      end
+      object PanelHistoryBtn: TPanel
+        Left = 0
+        Top = 413
+        Width = 453
+        Height = 48
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Align = alBottom
+        BevelOuter = bvNone
+        TabOrder = 1
+        DesignSize = (
+          453
+          48)
+        object LabelStatus: TLabel
+          Left = 340
+          Top = 33
+          Width = 100
+          Height = 17
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          Alignment = taCenter
+          Anchors = [akTop, akRight]
+          AutoSize = False
+          Caption = ' '
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Segoe UI'
+          Font.Style = []
+          ParentFont = False
+        end
+        object ProgressBar: TProgressBar
+          Left = 340
+          Top = 18
+          Width = 100
+          Height = 16
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          Anchors = [akTop, akRight]
+          Style = pbstMarquee
+          TabOrder = 0
+          Visible = False
+        end
+        object BtnNewChat: TButton
+          Left = 10
+          Top = 10
+          Width = 90
+          Height = 30
+          Margins.Left = 5
+          Margins.Top = 5
+          Margins.Right = 5
+          Margins.Bottom = 5
+          Caption = 'New Chat'
+          TabOrder = 1
+          OnClick = BtnNewChatClick
+        end
       end
     end
   end

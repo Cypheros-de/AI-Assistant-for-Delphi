@@ -50,6 +50,9 @@ contains
   SSHPascal.libssh2_sftp in 'SSHPascal.libssh2_sftp.pas',
   SSHPascal.SftpClient in 'SSHPascal.SftpClient.pas',
   SSHPascal.SocketUtils in 'SSHPascal.SocketUtils.pas',
-  SSHPascal.Ssh2Client in 'SSHPascal.Ssh2Client.pas';
+  SSHPascal.Ssh2Client in 'SSHPascal.Ssh2Client.pas',
+  CyAIAssistant.DonutGraph in 'CyAIAssistant.DonutGraph.pas',
+  CyAIAssistant.GPUMonitor in 'CyAIAssistant.GPUMonitor.pas',
+  CyAIAssistant.UsagePresent in 'CyAIAssistant.UsagePresent.pas';
 
 end.

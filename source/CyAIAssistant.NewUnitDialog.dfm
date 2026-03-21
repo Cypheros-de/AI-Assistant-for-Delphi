@@ -1,23 +1,24 @@
-﻿object NewUnitDialog: TNewUnitDialog
+object NewUnitDialog: TNewUnitDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Unit/Class Assistant'
   ClientHeight = 527
   ClientWidth = 855
   Color = clBtnFace
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 500
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poScreenCenter
-  TextHeight = 25
-  PixelsPerInch = 96
+  TextHeight = 15
   object PanelTop: TPanel
     Left = 0
     Top = 0
     Width = 855
-    Height = 50
+    Height = 52
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -25,13 +26,18 @@
     Align = alTop
     BevelOuter = bvNone
     Color = 12607488
+    DoubleBuffered = True
+    Padding.Top = 1
+    Padding.Right = 1
+    Padding.Bottom = 1
     ParentBackground = False
+    ParentDoubleBuffered = False
     TabOrder = 0
     StyleElements = [seFont, seBorder]
     object LabelTitle: TLabel
       Left = 0
-      Top = 0
-      Width = 855
+      Top = 1
+      Width = 674
       Height = 50
       Margins.Left = 5
       Margins.Top = 5
@@ -51,10 +57,20 @@
       ExplicitWidth = 565
       ExplicitHeight = 25
     end
+    object PaintBox1: TPaintBox
+      Left = 674
+      Top = 1
+      Width = 180
+      Height = 50
+      Align = alRight
+      OnPaint = PaintBox1Paint
+      ExplicitLeft = 757
+      ExplicitHeight = 54
+    end
   end
   object PanelProvider: TPanel
     Left = 0
-    Top = 50
+    Top = 52
     Width = 855
     Height = 36
     Margins.Left = 5
@@ -68,7 +84,7 @@
       Left = 10
       Top = 11
       Width = 47
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -79,7 +95,7 @@
       Left = 224
       Top = 11
       Width = 37
-      Height = 17
+      Height = 15
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -90,7 +106,7 @@
       Left = 72
       Top = 8
       Width = 140
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -109,7 +125,7 @@
       Left = 272
       Top = 8
       Width = 220
-      Height = 22
+      Height = 23
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -221,9 +237,9 @@
   end
   object PanelMain: TPanel
     Left = 0
-    Top = 86
+    Top = 88
     Width = 855
-    Height = 398
+    Height = 396
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -235,7 +251,7 @@
       Left = 320
       Top = 0
       Width = 5
-      Height = 398
+      Height = 396
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -246,7 +262,7 @@
       Left = 0
       Top = 0
       Width = 320
-      Height = 398
+      Height = 396
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -255,13 +271,13 @@
       BevelOuter = bvNone
       TabOrder = 0
       DesignSize = (
-        480
-        597)
+        320
+        396)
       object LabelStyle: TLabel
         Left = 6
         Top = 6
-        Width = 87
-        Height = 17
+        Width = 88
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -271,8 +287,8 @@
       object LabelDesc: TLabel
         Left = 6
         Top = 152
-        Width = 143
-        Height = 17
+        Width = 144
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -289,7 +305,7 @@
         Margins.Right = 5
         Margins.Bottom = 5
         Anchors = [akLeft, akTop, akRight]
-        ItemHeight = 25
+        ItemHeight = 15
         Items.Strings = (
           'Full Unit'
           'Class Only'
@@ -302,7 +318,7 @@
         Left = 6
         Top = 170
         Width = 308
-        Height = 316
+        Height = 314
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -315,8 +331,8 @@
     object PanelRight: TPanel
       Left = 325
       Top = 0
-      Width = 529
-      Height = 398
+      Width = 530
+      Height = 396
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -325,13 +341,13 @@
       BevelOuter = bvNone
       TabOrder = 1
       DesignSize = (
-        794
-        597)
+        530
+        396)
       object LabelResult: TLabel
         Left = 6
         Top = 6
-        Width = 245
-        Height = 17
+        Width = 246
+        Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -342,7 +358,7 @@
         Left = 6
         Top = 24
         Width = 517
-        Height = 462
+        Height = 460
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5

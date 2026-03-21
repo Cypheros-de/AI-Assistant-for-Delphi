@@ -11,7 +11,7 @@ uses
   Vcl.ComCtrls, Vcl.Graphics,
   ToolsAPI,
   CyAIAssistant.Settings,
-  CyAIAssistant.AIClient;
+  CyAIAssistant.AIClient, CyAIAssistant.DonutGraph;
 
 type
   TPromptDialog = class(TForm)
@@ -40,16 +40,29 @@ type
     LabelFinal: TLabel;
     MemoCode: TMemo;
     MemoFinalPrompt: TMemo;
+    PaintBox1: TPaintBox;
     procedure ComboProviderChange(Sender: TObject);
     procedure ListPromptsClick(Sender: TObject);
     procedure MemoCustomPrefixChange(Sender: TObject);
     procedure BtnSubmitClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
     procedure BtnCancelClick(Sender: TObject);
+    procedure PaintBox1Paint(Sender: TObject);
   private
     FSelectedCode: string;
     FSourceEditor: IOTASourceEditor;
     FAIClient: TAIClient;
+
+    FCPUUsage: Single;
+    FGPUUsage: Single;
+    FVRAMUsage: Single;
+    FVRAM_MB: Cardinal;
+    FVRAM_MBUsed: Cardinal;
+    FHasGPU: Boolean;
+    FCPUDonut: TDonutGraph;
+    FGPUDonut: TDonutGraph;
+    FVRAMDonut: TDonutGraph;
+
     procedure PopulatePrompts;
     procedure UpdateFinalPrompt;
     procedure SetBusy(ABusy: Boolean);
@@ -58,6 +71,7 @@ type
   public
     constructor Create(AOwner: TComponent; const ASelectedCode: string; ASourceEditor: IOTASourceEditor); reintroduce;
     destructor Destroy; override;
+    procedure SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal ; HasGPU: Boolean);
   end;
 
 implementation
@@ -66,7 +80,8 @@ implementation
 
 uses
   CyAIAssistant.DiffViewer,
-  CyAIAssistant.IDETheme;
+  CyAIAssistant.IDETheme,
+  CyAIAssistant.UsagePresent;
 
 constructor TPromptDialog.Create(AOwner: TComponent; const ASelectedCode: string; ASourceEditor: IOTASourceEditor);
 var
@@ -93,12 +108,26 @@ begin
     UpdateFinalPrompt;
   end;
 
+  FCPUUsage := 0;
+  FGPUUsage := 0;
+  FVRAMUsage:= 0;
+  FVRAM_MB  := 0;
+  FVRAM_MBUsed:= 0;
+  FHasGPU := False;
+  FCPUDonut := TDonutGraph.Create;
+  FGPUDonut := TDonutGraph.Create;
+  FVRAMDonut:= TDonutGraph.Create;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+
   ApplyIDETheme(Self);
 end;
 
 destructor TPromptDialog.Destroy;
 begin
   FAIClient.Free;
+  FCPUDonut.Free;
+  FGPUDonut.Free;
+  FVRAMDonut.Free;
   inherited;
 end;
 
@@ -181,6 +210,18 @@ begin
     LabelStatus.Caption := 'Ready.';
 end;
 
+procedure TPromptDialog.SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal; HasGPU: Boolean);
+begin
+  FCPUUsage := CPUUsage;
+  FGPUUsage := GPUUsage;
+  FVRAMUsage:= VRAMUsage;
+  FVRAM_MB  := VRAM_MB;
+  FVRAM_MBUsed := VRAM_MBUsed;
+  FHasGPU   := HasGPU;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+  Paintbox1.Invalidate;
+end;
+
 procedure TPromptDialog.BtnStopClick(Sender: TObject);
 begin
   FAIClient.Cancel;
@@ -249,6 +290,11 @@ end;
 procedure TPromptDialog.BtnCancelClick(Sender: TObject);
 begin
   Close;
+end;
+
+procedure TPromptDialog.PaintBox1Paint(Sender: TObject);
+begin
+  PaintUsageGraphs(PaintBox1.Canvas, PaintBox1.Width, PaintBox1.Height, FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, 'CPU', 'GPU', 'VRAM');
 end;
 
 end.

@@ -16,7 +16,7 @@ object DiffViewerForm: TDiffViewerForm
     Left = 0
     Top = 0
     Width = 958
-    Height = 50
+    Height = 52
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -31,7 +31,7 @@ object DiffViewerForm: TDiffViewerForm
       Left = 0
       Top = 0
       Width = 958
-      Height = 50
+      Height = 52
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -128,9 +128,9 @@ object DiffViewerForm: TDiffViewerForm
   end
   object PageControl: TPageControl
     Left = 0
-    Top = 50
+    Top = 52
     Width = 958
-    Height = 469
+    Height = 467
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -138,6 +138,8 @@ object DiffViewerForm: TDiffViewerForm
     ActivePage = TabSideBySide
     Align = alClient
     TabOrder = 2
+    ExplicitTop = 50
+    ExplicitHeight = 469
     object TabSideBySide: TTabSheet
       Margins.Left = 5
       Margins.Top = 5
@@ -148,7 +150,7 @@ object DiffViewerForm: TDiffViewerForm
         Left = 467
         Top = 0
         Width = 4
-        Height = 439
+        Height = 437
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -160,7 +162,7 @@ object DiffViewerForm: TDiffViewerForm
         Left = 0
         Top = 0
         Width = 467
-        Height = 439
+        Height = 437
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -168,6 +170,7 @@ object DiffViewerForm: TDiffViewerForm
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
+        ExplicitHeight = 439
         object LabelOrig: TLabel
           Left = 0
           Top = 0
@@ -192,7 +195,7 @@ object DiffViewerForm: TDiffViewerForm
           Left = 0
           Top = 15
           Width = 467
-          Height = 424
+          Height = 422
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -208,13 +211,14 @@ object DiffViewerForm: TDiffViewerForm
           ScrollBars = ssBoth
           TabOrder = 0
           WordWrap = False
+          ExplicitHeight = 424
         end
       end
       object PanelNew: TPanel
         Left = 471
         Top = 0
         Width = 479
-        Height = 439
+        Height = 437
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -222,6 +226,7 @@ object DiffViewerForm: TDiffViewerForm
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitHeight = 439
         object LabelNew: TLabel
           Left = 0
           Top = 0
@@ -246,7 +251,7 @@ object DiffViewerForm: TDiffViewerForm
           Left = 0
           Top = 15
           Width = 479
-          Height = 424
+          Height = 422
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -262,6 +267,7 @@ object DiffViewerForm: TDiffViewerForm
           ScrollBars = ssBoth
           TabOrder = 0
           WordWrap = False
+          ExplicitHeight = 424
         end
       end
     end

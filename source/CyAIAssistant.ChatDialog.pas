@@ -21,7 +21,7 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
   Vcl.Dialogs, Vcl.Graphics, Vcl.Menus, Vcl.Clipbrd,
   CyAIAssistant.Settings,
-  CyAIAssistant.AIClient;
+  CyAIAssistant.AIClient, CyAIAssistant.DonutGraph;
 
 type
   TDetectedFile = record
@@ -63,6 +63,8 @@ type
     PanelHistory: TPanel;
     LabelHistory: TLabel;
     RichHistory: TRichEdit;
+    PanelHistoryBtn: TPanel;
+    PaintBox1: TPaintBox;
     procedure ComboProviderChange(Sender: TObject);
     procedure BtnNewChatClick(Sender: TObject);
     procedure BtnSendClick(Sender: TObject);
@@ -74,11 +76,23 @@ type
     procedure BtnOpenInIDEClick(Sender: TObject);
     procedure MenuItemCopyClick(Sender: TObject);
     procedure MenuItemSelectAllClick(Sender: TObject);
+    procedure PaintBox1Paint(Sender: TObject);
   private
     FAIClient: TAIClient;
     FHistory: TList<TChatMessage>;
     FDetectedFiles: TList<TDetectedFile>;
     FBusy: Boolean;
+
+    FCPUUsage: Single;
+    FGPUUsage: Single;
+    FVRAMUsage: Single;
+    FVRAM_MB: Cardinal;
+    FVRAM_MBUsed: Cardinal;
+    FHasGPU: Boolean;
+    FCPUDonut: TDonutGraph;
+    FGPUDonut: TDonutGraph;
+    FVRAMDonut: TDonutGraph;
+
     procedure SetBusy(ABusy: Boolean);
     procedure UpdateModelHint;
     procedure AppendHistory(const ARole, AText: string; const ADuration: TDateTime = 0);
@@ -87,6 +101,7 @@ type
     function SaveFileWithDialog(const AFile: TDetectedFile; const ADefaultDir: string): string;
     procedure OpenFileInIDE(const APath: string);
   public
+    procedure SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal ; HasGPU: Boolean);
     constructor Create(AOwner: TComponent); reintroduce;
     destructor Destroy; override;
   end;
@@ -100,7 +115,8 @@ uses
   System.IOUtils,
   System.RegularExpressions,
   ToolsAPI,
-  CyAIAssistant.IDETheme;
+  CyAIAssistant.IDETheme,
+  CyAIAssistant.UsagePresent;
 
 constructor TChatDialog.Create(AOwner: TComponent);
 begin
@@ -113,11 +129,26 @@ begin
   UpdateModelHint;
   ActiveControl := MemoInput;
 
+  FCPUUsage := 0;
+  FGPUUsage := 0;
+  FVRAMUsage:= 0;
+  FVRAM_MB  := 0;
+  FVRAM_MBUsed:= 0;
+  FHasGPU := False;
+  FCPUDonut := TDonutGraph.Create;
+  FGPUDonut := TDonutGraph.Create;
+  FVRAMDonut:= TDonutGraph.Create;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+
   ApplyIDETheme(Self);
 end;
 
 destructor TChatDialog.Destroy;
 begin
+  FCPUDonut.Free;
+  FGPUDonut.Free;
+  FVRAMDonut.Free;
+
   FAIClient.Free;
   FHistory.Free;
   FDetectedFiles.Free;
@@ -157,6 +188,18 @@ begin
     ProgressBar.Style := pbstMarquee
   else
     ProgressBar.Style := pbstNormal;
+end;
+
+procedure TChatDialog.SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal; HasGPU: Boolean);
+begin
+  FCPUUsage := CPUUsage;
+  FGPUUsage := GPUUsage;
+  FVRAMUsage:= VRAMUsage;
+  FVRAM_MB  := VRAM_MB;
+  FVRAM_MBUsed := VRAM_MBUsed;
+  FHasGPU   := HasGPU;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+  Paintbox1.Invalidate;
 end;
 
 // ---------------------------------------------------------------------------
@@ -839,6 +882,11 @@ end;
 procedure TChatDialog.MenuItemSelectAllClick(Sender: TObject);
 begin
   RichHistory.SelectAll;
+end;
+
+procedure TChatDialog.PaintBox1Paint(Sender: TObject);
+begin
+  PaintUsageGraphs(PaintBox1.Canvas, PaintBox1.Width, PaintBox1.Height, FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, 'CPU', 'GPU', 'VRAM');
 end;
 
 end.

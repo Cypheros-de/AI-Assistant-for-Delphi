@@ -11,7 +11,7 @@ uses
   Vcl.Dialogs,
   ToolsAPI,
   CyAIAssistant.Settings,
-  CyAIAssistant.AIClient;
+  CyAIAssistant.AIClient, CyAIAssistant.DonutGraph;
 
 type
   TNewUnitDialog = class(TForm)
@@ -39,15 +39,28 @@ type
     PanelRight: TPanel;
     LabelResult: TLabel;
     MemoResult: TMemo;
+    PaintBox1: TPaintBox;
     procedure ComboProviderChange(Sender: TObject);
     procedure BtnGenerateClick(Sender: TObject);
     procedure BtnStopClick(Sender: TObject);
     procedure BtnCreateUnitClick(Sender: TObject);
     procedure BtnCloseClick(Sender: TObject);
     procedure MemoResultChange(Sender: TObject);
+    procedure PaintBox1Paint(Sender: TObject);
   private
     FAIClient: TAIClient;
     FLastResult: string;
+
+    FCPUUsage: Single;
+    FGPUUsage: Single;
+    FVRAMUsage: Single;
+    FVRAM_MB: Cardinal;
+    FVRAM_MBUsed: Cardinal;
+    FHasGPU: Boolean;
+    FCPUDonut: TDonutGraph;
+    FGPUDonut: TDonutGraph;
+    FVRAMDonut: TDonutGraph;
+
     procedure SetBusy(ABusy: Boolean);
     procedure UpdateModelHint;
     function BuildPrompt: string;
@@ -55,6 +68,7 @@ type
   public
     constructor Create(AOwner: TComponent); reintroduce;
     destructor Destroy; override;
+    procedure SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal ; HasGPU: Boolean);
   end;
 
 implementation
@@ -62,7 +76,7 @@ implementation
 {$R *.dfm}
 
 uses
-  CyAIAssistant.IDETheme;
+  CyAIAssistant.IDETheme, CyAIAssistant.UsagePresent;
 
 const
 STYLES:
@@ -88,12 +102,27 @@ begin
   ComboProvider.ItemIndex := Ord(GSettings.Provider);
   ListStyle.ItemIndex := 0;
   UpdateModelHint;
+
+  FCPUUsage := 0;
+  FGPUUsage := 0;
+  FVRAMUsage:= 0;
+  FVRAM_MB  := 0;
+  FVRAM_MBUsed:= 0;
+  FHasGPU := False;
+  FCPUDonut := TDonutGraph.Create;
+  FGPUDonut := TDonutGraph.Create;
+  FVRAMDonut:= TDonutGraph.Create;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+
   ApplyIDETheme(Self);
 end;
 
 destructor TNewUnitDialog.Destroy;
 begin
   FAIClient.Free;
+  FCPUDonut.Free;
+  FGPUDonut.Free;
+  FVRAMDonut.Free;
   inherited;
 end;
 
@@ -126,6 +155,18 @@ begin
   BtnCreateUnit.Enabled := (not ABusy) and (Trim(MemoResult.Text) <> '');
   ProgressBar.Visible := ABusy;
   LabelStatus.Caption := '';
+end;
+
+procedure TNewUnitDialog.SetMonitorValues(CPUUsage, GPUUsage, VRAMUsage: Single; VRAM_MB, VRAM_MBUsed: Cardinal; HasGPU: Boolean);
+begin
+  FCPUUsage := CPUUsage;
+  FGPUUsage := GPUUsage;
+  FVRAMUsage:= VRAMUsage;
+  FVRAM_MB  := VRAM_MB;
+  FVRAM_MBUsed := VRAM_MBUsed;
+  FHasGPU   := HasGPU;
+  UpdateDonutsGraphs(FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, FCPUUsage, FGPUUsage, FVRAMUsage, Paintbox1.Height);
+  Paintbox1.Invalidate;
 end;
 
 procedure TNewUnitDialog.BtnStopClick(Sender: TObject);
@@ -268,6 +309,11 @@ end;
 procedure TNewUnitDialog.BtnCloseClick(Sender: TObject);
 begin
   Close;
+end;
+
+procedure TNewUnitDialog.PaintBox1Paint(Sender: TObject);
+begin
+  PaintUsageGraphs(PaintBox1.Canvas, PaintBox1.Width, PaintBox1.Height, FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, 'CPU', 'GPU', 'VRAM');
 end;
 
 end.

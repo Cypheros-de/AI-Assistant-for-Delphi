@@ -17,11 +17,41 @@
 interface
 
 uses
-  System.SysUtils, System.Classes,
+  System.SysUtils, System.Classes, System.SyncObjs,
   Vcl.Menus, Vcl.ActnList, Vcl.ExtCtrls,
-  ToolsAPI;
+  ToolsAPI, CyAIAssistant.GPUMonitor;
 
 type
+  // Polls TThread.GetCPUUsage every 500 ms on a background thread.
+  // Stop is signalled via a TEvent so the thread wakes immediately on shutdown
+  // instead of waiting out the full sleep interval.
+  TCPUMonitorThread = class(TThread)
+  private
+    FStopEvent: TEvent;
+    FCPUUsage: Single;
+    FMonitorEvent: TNotifyEvent;
+    FGPUUsage: Single;
+    FVRAMUsage: Single;
+    FGPUMonitoring: Boolean;
+    FVRAM_MB: Cardinal;
+    FVRAM_MBUsed: Cardinal;
+    procedure DoEvent;
+    procedure UpdateGPUUsage(AGPUMonitor: TGPUMonitor);
+  protected
+    procedure Execute; override;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Stop;
+    property CPUUsage: Single read FCPUUsage;
+    property GPUMonitor: Boolean read FGPUMonitoring;
+    property GPUUsage: Single read FGPUUsage;
+    property VRAMUsage: Single read FVRAMUsage;
+    property VRAM_MB: Cardinal read FVRAM_MB;
+    property VRAM_MBUsed: Cardinal read FVRAM_MBUsed;
+    property OnMonitor: TNotifyEvent read FMonitorEvent write FMonitorEvent;
+  end;
+
   TCyAIAssistantPlugin = class
   private
     // Tools menu items
@@ -36,6 +66,7 @@ type
     FSavedPopupMethod: TNotifyEvent;
 
     FTimer: TTimer;
+    FCPUThread: TCPUMonitorThread;
     FInstalled: Boolean;
 
     procedure OnTimer(Sender: TObject);
@@ -54,9 +85,11 @@ type
     function FindEditorPopup: TPopupMenu;
     function GetSelectedText: string;
     function GetCurrentEditor: IOTASourceEditor;
+    procedure OnMonitor(Sender: TObject);
   public
     constructor Create;
     destructor Destroy; override;
+    function GetCPUUsage: Single;
   end;
 
 implementation
@@ -71,12 +104,128 @@ uses
   CyAIAssistant.SftpSyncDialog,
   CyAIAssistant.AboutDialog;
 
+var
+  ChatDlg: TChatDialog;
+  PromptDlg: TPromptDialog;
+  NewUnitDlg: TNewUnitDialog;
+
+// TCPUMonitorThread
+
+constructor TCPUMonitorThread.Create;
+begin
+  FStopEvent := TEvent.Create(nil, True, False, '');
+  FCPUUsage  := 0;
+  FGPUUsage  := 0;
+  FVRAMUsage := 0;
+  FVRAM_MB   := 0;
+  FVRAM_MBUsed := 0;
+  FGPUMonitoring := False;
+  FreeOnTerminate := False;
+  inherited Create(False);
+end;
+
+destructor TCPUMonitorThread.Destroy;
+begin
+  FStopEvent.Free;
+  inherited;
+end;
+
+procedure TCPUMonitorThread.DoEvent;
+begin
+  if assigned(FMonitorEvent) then
+    FMonitorEvent(self);
+end;
+
+procedure TCPUMonitorThread.UpdateGPUUsage(AGPUMonitor: TGPUMonitor);
+var
+    i: Integer;
+    LGPUUsage: Double;
+    LVRam: Cardinal;
+    LVRamUsed: Cardinal;
+    HWGPUs: Integer;
+begin
+  LGPUUsage := 0;
+  HWGPUs := 0;
+  LVRam := 0;
+  LVRamUsed := 0;
+  AGPUMonitor.Update;
+  for i := 0 to AGPUMonitor.GPUCount - 1 do
+  begin
+    if not AGPUMonitor.GPUs[i].IsSoftwareDevice then
+    begin
+      LGPUUsage := LGPUUsage + AGPUMonitor.GPUs[i].UsagePercent;
+      LVRam := LVRam + AGPUMonitor.GPUs[i].DedicatedTotalMB;
+      LVRamUsed := LVRamUsed + AGPUMonitor.GPUs[i].DedicatedUsedMB;
+      Inc(HWGPUs);
+    end;
+  end;
+
+  if HWGPUs > 0 then
+    FGPUUsage := LGPUUsage / HWGPUs
+  else
+    FGPUUsage := 0;
+
+  if LVRam > 0 then
+    FVRAMUsage := 100 * LVRamUsed / LVRam
+  else
+    FVRAMUsage := 0;
+
+  FVRAM_MB := LVRam;
+  FVRAM_MBUsed := LVRamUsed;
+end;
+
+procedure TCPUMonitorThread.Execute;
+var
+    PrevSystemTimes: TSystemTimes;
+    GPUMonitor: TGPUMonitor;
+    HWGPUs: Integer;
+    i: Integer;
+begin
+  HWGPUs := 0;
+  try
+    GPUMonitor := TGPUMonitor.Create;
+    for i := 0 to GPUMonitor.GPUCount - 1 do
+    begin
+      //Only hardware GPUs
+      if not GPUMonitor.GPUs[i].IsSoftwareDevice then
+        inc(HWGPUs);
+    end;
+    FGPUMonitoring := GPUMonitor.IsReady and (HWGPUs > 0);
+  except
+  end;
+  try
+    while not Terminated do
+    begin
+      FCPUUsage := TThread.GetCPUUsage(PrevSystemTimes);
+      if FGPUMonitoring then
+        UpdateGPUUsage(GPUMonitor);
+
+      Synchronize(DoEvent);
+
+      // Wait 1000 ms or until Stop signals the event — whichever comes first.
+      if FStopEvent.WaitFor(1000) = wrSignaled then
+        Break;
+    end;
+  finally
+    if assigned(GPUMonitor) then
+      GPUMonitor.Free;
+  end;
+end;
+
+procedure TCPUMonitorThread.Stop;
+begin
+  Terminate;
+  FStopEvent.SetEvent; // wake the thread immediately
+end;
+
 // TCyAIAssistantPlugin
 
 constructor TCyAIAssistantPlugin.Create;
 begin
   inherited;
   FInstalled := False;
+  FCPUThread := TCPUMonitorThread.Create;
+  FCPUThread.OnMonitor := OnMonitor;
   FTimer := TTimer.Create(nil);
   FTimer.Interval := 500;
   FTimer.OnTimer := OnTimer;
@@ -87,6 +236,13 @@ destructor TCyAIAssistantPlugin.Destroy;
 begin
   // Disable timer immediately to prevent any pending callbacks firing
   // after we start tearing down.  Free it before touching anything else.
+  if Assigned(FCPUThread) then
+  begin
+    FCPUThread.Stop;
+    FCPUThread.WaitFor;
+    FreeAndNil(FCPUThread);
+  end;
+
   if Assigned(FTimer) then
   begin
     FTimer.Enabled := False;
@@ -135,6 +291,18 @@ begin
   end;
 
   inherited;
+end;
+
+procedure TCyAIAssistantPlugin.OnMonitor(Sender: TObject);
+begin
+  if assigned(ChatDlg) and (ChatDlg.Visible) then
+    ChatDlg.SetMonitorValues(FCPUThread.CPUUsage, FCPUThread.GPUUsage, FCPUThread.VRAMUsage, FCPUThread.VRAM_MB, FCPUThread.VRAM_MBUsed, FCPUThread.GPUMonitor);
+
+  if assigned(PromptDlg) and (PromptDlg.Visible) then
+    PromptDlg.SetMonitorValues(FCPUThread.CPUUsage, FCPUThread.GPUUsage, FCPUThread.VRAMUsage, FCPUThread.VRAM_MB, FCPUThread.VRAM_MBUsed, FCPUThread.GPUMonitor);
+
+  if assigned(NewUnitDlg) and (NewUnitDlg.Visible) then
+    NewUnitDlg.SetMonitorValues(FCPUThread.CPUUsage, FCPUThread.GPUUsage, FCPUThread.VRAMUsage, FCPUThread.VRAM_MB, FCPUThread.VRAM_MBUsed, FCPUThread.GPUMonitor);
 end;
 
 procedure TCyAIAssistantPlugin.OnTimer(Sender: TObject);
@@ -442,7 +610,6 @@ end;
 procedure TCyAIAssistantPlugin.OnAIAssistClick(Sender: TObject);
 var
   SelectedText: string;
-  Dlg: TPromptDialog;
 begin
   SelectedText := GetSelectedText;
   if Length(Trim(SelectedText)) = 0 then
@@ -450,11 +617,12 @@ begin
     ShowMessage('No text selected.' + sLineBreak + 'Please select some source code in the editor first.');
     Exit;
   end;
-  Dlg := TPromptDialog.Create(nil, SelectedText, GetCurrentEditor);
+  PromptDlg := TPromptDialog.Create(nil, SelectedText, GetCurrentEditor);
   try
-    Dlg.ShowModal;
+    PromptDlg.ShowModal;
   finally
-    Dlg.Free;
+    PromptDlg.Free;
+    PromptDlg := nil;
   end;
 end;
 
@@ -464,14 +632,12 @@ begin
 end;
 
 procedure TCyAIAssistantPlugin.OnNewUnitClick(Sender: TObject);
-var
-  Dlg: TNewUnitDialog;
 begin
-  Dlg := TNewUnitDialog.Create(nil);
+  NewUnitDlg := TNewUnitDialog.Create(nil);
   try
-    Dlg.ShowModal;
+    NewUnitDlg.ShowModal;
   finally
-    Dlg.Free;
+    NewUnitDlg.Free;
   end;
 end;
 
@@ -520,15 +686,22 @@ begin
   end;
 end;
 
-procedure TCyAIAssistantPlugin.OnChatClick(Sender: TObject);
-var
-  Dlg: TChatDialog;
+function TCyAIAssistantPlugin.GetCPUUsage: Single;
 begin
-  Dlg := TChatDialog.Create(nil);
+  if Assigned(FCPUThread) then
+    Result := FCPUThread.CPUUsage
+  else
+    Result := 0;
+end;
+
+procedure TCyAIAssistantPlugin.OnChatClick(Sender: TObject);
+begin
+  ChatDlg := TChatDialog.Create(nil);
   try
-    Dlg.ShowModal;
+    ChatDlg.ShowModal;
   finally
-    Dlg.Free;
+    ChatDlg.Free;
+    ChatDlg := nil;
   end;
 end;
 

@@ -5,6 +5,8 @@ object PromptDialog: TPromptDialog
   ClientHeight = 606
   ClientWidth = 900
   Color = clBtnFace
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 500
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -14,20 +16,21 @@ object PromptDialog: TPromptDialog
   TextHeight = 15
   object Splitter: TSplitter
     Left = 280
-    Top = 94
+    Top = 90
     Width = 4
-    Height = 464
+    Height = 468
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
     Margins.Bottom = 5
+    ExplicitTop = 94
     ExplicitHeight = 506
   end
   object PanelTop: TPanel
     Left = 0
     Top = 0
     Width = 900
-    Height = 56
+    Height = 52
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -35,14 +38,19 @@ object PromptDialog: TPromptDialog
     Align = alTop
     BevelOuter = bvNone
     Color = 12607488
+    DoubleBuffered = True
+    Padding.Top = 1
+    Padding.Right = 1
+    Padding.Bottom = 1
     ParentBackground = False
+    ParentDoubleBuffered = False
     TabOrder = 0
     StyleElements = [seFont, seBorder]
     object LabelTitle: TLabel
       Left = 0
-      Top = 0
-      Width = 900
-      Height = 56
+      Top = 1
+      Width = 719
+      Height = 50
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -59,10 +67,20 @@ object PromptDialog: TPromptDialog
       ExplicitWidth = 536
       ExplicitHeight = 25
     end
+    object PaintBox1: TPaintBox
+      Left = 719
+      Top = 1
+      Width = 180
+      Height = 50
+      Align = alRight
+      OnPaint = PaintBox1Paint
+      ExplicitLeft = 757
+      ExplicitHeight = 54
+    end
   end
   object PanelProvider: TPanel
     Left = 0
-    Top = 56
+    Top = 52
     Width = 900
     Height = 38
     Margins.Left = 5
@@ -233,9 +251,9 @@ object PromptDialog: TPromptDialog
   end
   object PanelLeft: TPanel
     Left = 0
-    Top = 94
+    Top = 90
     Width = 280
-    Height = 464
+    Height = 468
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -301,7 +319,7 @@ object PromptDialog: TPromptDialog
       Left = 0
       Top = 230
       Width = 280
-      Height = 234
+      Height = 238
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
@@ -320,9 +338,9 @@ object PromptDialog: TPromptDialog
   end
   object PanelRight: TPanel
     Left = 284
-    Top = 94
+    Top = 90
     Width = 616
-    Height = 464
+    Height = 468
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -395,7 +413,7 @@ object PromptDialog: TPromptDialog
       Left = 0
       Top = 230
       Width = 616
-      Height = 234
+      Height = 238
       Margins.Left = 5
       Margins.Top = 5
       Margins.Right = 5
