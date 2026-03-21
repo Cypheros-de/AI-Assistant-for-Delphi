@@ -120,10 +120,10 @@ All AI provider configuration in one place:
 
 | Provider | Notes |
 |---|---|
-| **Anthropic Claude** | claude-opus-4-5, claude-sonnet-4-5, and others |
+| **Anthropic Claude** | claude-opus-4.6, claude-sonnet-4.6, and others |
 | **OpenAI** | gpt-4o, gpt-4-turbo, and others |
-| **Ollama** | Any locally hosted model — fully offline, nothing leaves the machine |
-| **Groq** | llama3-70b, mixtral-8x7b, and others |
+| **Ollama** | Any locally hosted model — fully offline, nothing leaves the machine, deepseek-coder:latest, llama3.2:latest, qwen3-coder:30b, gpt-oss:20b and others |
+| **Groq** | llama3.3-70b, gpt-oss 120B, and others |
 | **Mistral AI** | mistral-large, codestral, and others |
 
 ---
