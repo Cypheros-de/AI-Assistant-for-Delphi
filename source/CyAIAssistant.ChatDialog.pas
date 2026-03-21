@@ -16,7 +16,7 @@
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Generics.Collections,
+  System.SysUtils, System.Classes, System.Generics.Collections, System.StrUtils,
   Winapi.Windows, Winapi.Messages,
   Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls,
   Vcl.Dialogs, Vcl.Graphics, Vcl.Menus, Vcl.Clipbrd,
@@ -479,7 +479,7 @@ const
 var
   Lines: TStringList;
   i, J: Integer;
-  Line: string;
+  Line, TrimLine: string;
   InFence: Boolean;
   FenceFile: string;
   ContentSB: TStringBuilder;
@@ -488,99 +488,173 @@ var
   Parts: TArray<string>;
   CandExt: string;
   ValidExt: Boolean;
-  Content: string;
+  PrevNonBlank: string;
 
   function GuessNameFromContent(const AContent: string): string;
   var
     M: TMatch;
     Kind: string;
-    Name: string;
   begin
     Result := '';
-    M := TRegEx.Match(AContent, '^\s*(unit|program|package)\s+([A-Za-z0-9_.]+)\s*;', [roIgnoreCase, roMultiLine]);
+    M := TRegEx.Match(AContent, '^\s*(unit|program|package)\s+([A-Za-z0-9_.]+)\s*;',
+      [roIgnoreCase, roMultiLine]);
     if M.Success then
     begin
       Kind := LowerCase(M.Groups[1].Value);
-      Name := M.Groups[2].Value;
-      if Kind = 'program' then
-        Result := Name + '.dpr'
-      else if Kind = 'package' then
-        Result := Name + '.dpk'
-      else
-        Result := Name + '.pas';
+      if Kind = 'program' then Result := M.Groups[2].Value + '.dpr'
+      else if Kind = 'package' then Result := M.Groups[2].Value + '.dpk'
+      else Result := M.Groups[2].Value + '.pas';
+    end;
+  end;
+
+  // Parse the filename hint from a fence-opening line (everything after ```).
+  function ParseFenceFileName(const AFenceLine: string): string;
+  var
+    P: TArray<string>;
+    Ext: string;
+    K: Integer;
+  begin
+    Result := '';
+    P := AFenceLine.Split([' ', #9], TStringSplitOptions.ExcludeEmpty);
+    for K := 0 to High(P) do
+    begin
+      Ext := LowerCase(TPath.GetExtension(P[K]));
+      for var KnownExt in KNOWN_EXTS do
+        if Ext = KnownExt then
+        begin
+          Result := P[K];
+          Exit;
+        end;
+    end;
+  end;
+
+  // Save each Pascal unit found in AContent as a separate TDetectedFile.
+  // A single fence block may contain multiple units when the AI omits the
+  // closing ``` between them; we split on "end." followed by a new
+  // unit/program/package declaration.
+  // AFenceFile is used for the first segment only (it came from the fence
+  // header); subsequent segments get their name from GuessNameFromContent.
+  procedure FlushContent(const AContent, AFenceFile: string);
+  var
+    SLines: TStringList;
+    K: Integer;
+    SLine, SPrev: string;
+    SegSB: TStringBuilder;
+    SegContent, SegName: string;
+    IsFirst: Boolean;
+  begin
+    if Trim(AContent) = '' then Exit;
+    SLines := TStringList.Create;
+    SegSB  := TStringBuilder.Create;
+    try
+      SLines.Text := AContent;
+      SPrev   := '';
+      IsFirst := True;
+      for K := 0 to SLines.Count - 1 do
+      begin
+        SLine := SLines[K];
+        // Split point: previous non-blank line was "end." and this line
+        // starts a new unit/program/package declaration.
+        if (SegSB.Length > 0) and (SPrev = 'end.') and
+           TRegEx.IsMatch(Trim(SLine), '^(unit|program|package)\s+\w+',
+             [roIgnoreCase]) then
+        begin
+          SegContent := SegSB.ToString;
+          SegName := IfThen(IsFirst and (AFenceFile <> ''), AFenceFile,
+                            GuessNameFromContent(SegContent));
+          if (Trim(SegContent) <> '') and (SegName <> '') then
+          begin
+            DF.FileName := SegName;
+            DF.Content  := SegContent;
+            FDetectedFiles.Add(DF);
+          end;
+          SegSB.Clear;
+          IsFirst := False;
+        end;
+        if SegSB.Length > 0 then SegSB.AppendLine;
+        SegSB.Append(SLine);
+        if Trim(SLine) <> '' then SPrev := Trim(SLine);
+      end;
+      // Remaining segment
+      SegContent := SegSB.ToString;
+      SegName := IfThen(IsFirst and (AFenceFile <> ''), AFenceFile,
+                        GuessNameFromContent(SegContent));
+      if (Trim(SegContent) <> '') and (SegName <> '') then
+      begin
+        DF.FileName := SegName;
+        DF.Content  := SegContent;
+        FDetectedFiles.Add(DF);
+      end;
+    finally
+      SLines.Free;
+      SegSB.Free;
     end;
   end;
 
 begin
   Lines := TStringList.Create;
+  ContentSB := TStringBuilder.Create;
   try
     Lines.Text := AResponse;
-    InFence := False;
-    FenceFile := '';
-    ContentSB := TStringBuilder.Create;
-    try
-      for i := 0 to Lines.Count - 1 do
-      begin
-        Line := Lines[i];
+    InFence      := False;
+    FenceFile    := '';
+    PrevNonBlank := '';
 
-        if not InFence then
+    for i := 0 to Lines.Count - 1 do
+    begin
+      Line     := Lines[i];
+      TrimLine := Trim(Line);
+
+      if not InFence then
+      begin
+        // Any line starting with ``` opens a fence.
+        if (Length(TrimLine) >= 3) and (Copy(TrimLine, 1, 3) = '```') then
         begin
-          if (Length(Trim(Line)) >= 3) and (Copy(Trim(Line), 1, 3) = '```') then
-          begin
-            FenceLine := Trim(Copy(Trim(Line), 4, MaxInt));
-            Parts := FenceLine.Split([' ', #9], TStringSplitOptions.ExcludeEmpty);
-            FenceFile := '';
-            for J := 0 to High(Parts) do
-            begin
-              CandExt := LowerCase(TPath.GetExtension(Parts[J]));
-              ValidExt := False;
-              for var Ext in KNOWN_EXTS do
-                if CandExt = Ext then
-                begin
-                  ValidExt := True;
-                  Break;
-                end;
-              if ValidExt then
-              begin
-                FenceFile := Parts[J];
-                Break;
-              end;
-            end;
-            InFence := True;
-            ContentSB.Clear;
-          end;
+          FenceLine := Trim(Copy(TrimLine, 4, MaxInt));
+          FenceFile := ParseFenceFileName(FenceLine);
+          InFence   := True;
+          ContentSB.Clear;
+          PrevNonBlank := '';
+        end;
+      end
+      else
+      begin
+        // Bare ``` → normal fence close.
+        if TrimLine = '```' then
+        begin
+          FlushContent(ContentSB.ToString, FenceFile);
+          InFence   := False;
+          FenceFile := '';
+          ContentSB.Clear;
+        end
+        // A new fence opener (``` + non-empty suffix) while already inside a
+        // fence means the AI forgot the closing ```.  Treat it as an implicit
+        // close followed by a new open.
+        else if (Length(TrimLine) > 3) and (Copy(TrimLine, 1, 3) = '```') then
+        begin
+          FlushContent(ContentSB.ToString, FenceFile);
+          ContentSB.Clear;
+          PrevNonBlank := '';
+          FenceLine := Trim(Copy(TrimLine, 4, MaxInt));
+          FenceFile := ParseFenceFileName(FenceLine);
+          // InFence stays True — we are now in the new fence.
         end
         else
         begin
-          if Trim(Line) = '```' then
-          begin
-            Content := ContentSB.ToString;
-            if Trim(Content) <> '' then
-            begin
-              if FenceFile = '' then
-                FenceFile := GuessNameFromContent(Content);
-              if FenceFile <> '' then
-              begin
-                DF.FileName := FenceFile;
-                DF.Content := Content;
-                FDetectedFiles.Add(DF);
-              end;
-            end;
-            InFence := False;
-            FenceFile := '';
-          end
-          else
-          begin
-            if ContentSB.Length > 0 then
-              ContentSB.AppendLine;
-            ContentSB.Append(Line);
-          end;
+          if ContentSB.Length > 0 then ContentSB.AppendLine;
+          ContentSB.Append(Line);
+          if TrimLine <> '' then PrevNonBlank := TrimLine;
         end;
       end;
-    finally
-      ContentSB.Free;
     end;
+
+    // Handle a fence left open at the end of the response (AI omitted the
+    // closing ```).
+    if InFence then
+      FlushContent(ContentSB.ToString, FenceFile);
+
   finally
+    ContentSB.Free;
     Lines.Free;
   end;
 end;
