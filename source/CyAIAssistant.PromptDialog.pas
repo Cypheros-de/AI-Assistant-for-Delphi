@@ -294,7 +294,8 @@ end;
 
 procedure TPromptDialog.PaintBox1Paint(Sender: TObject);
 begin
-  PaintUsageGraphs(PaintBox1.Canvas, PaintBox1.Width, PaintBox1.Height, FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, 'CPU', 'GPU', 'VRAM');
+  if GSettings.Provider = apOllama then
+    PaintUsageGraphs(PaintBox1.Canvas, PaintBox1.Width, PaintBox1.Height, FCPUDonut, FGPUDonut, FVRAMDonut, FHasGPU, 'CPU', 'GPU', 'VRAM');
 end;
 
 end.
