@@ -45,6 +45,8 @@ A persistent chat window for open-ended work with the AI.
 - **Open in IDE** — detected files can be saved and immediately opened in the Delphi editor
 - **Stop button** — cancel a running request at any time
 
+![](https://github.com/Cypheros-de/AI-Assistant-for-Delphi/media/blob/Master/source/media/chat_ai.png)
+
 ---
 
 ### Unit / Class Assistant — Generate Complete Units from a Description
