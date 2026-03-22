@@ -1,4 +1,4 @@
-unit CyAIAssistant.SettingsDialog;
+﻿unit CyAIAssistant.SettingsDialog;
 
 // CyAIAssistant.SettingsDialog.pas
 // Settings UI: API keys, endpoints, models, temperature, prompt templates.
@@ -43,8 +43,10 @@ type
     ComboOllamaModel: TComboBox;
     BtnTestOllama: TButton;
     BtnLoadModels: TButton;
+    LblOllamaModelRating: TPanel;
     LblOllamaCompletionModel: TLabel;
     ComboOllamaCompletionModel: TComboBox;
+    LblCompletionRating: TPanel;
     ChkCodeCompletion: TCheckBox;
     TabGroq: TTabSheet;
     LblGroqKey: TLabel;
@@ -100,11 +102,15 @@ type
     procedure BtnClearFieldsClick(Sender: TObject);
     procedure BtnTestOllamaClick(Sender: TObject);
     procedure BtnLoadModelsClick(Sender: TObject);
+    procedure ComboOllamaModelChange(Sender: TObject);
+    procedure ComboOllamaCompletionModelChange(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
     procedure RefreshPromptList;
     procedure LoadOllamaModels(ASilent: Boolean);
+    procedure UpdateOllamaModelRating(const AModel: string);
+    procedure UpdateCompletionRating(const AModel: string);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -123,6 +129,9 @@ begin
   inherited Create(AOwner);
   LoadSettings;
   ApplyIDETheme(Self);
+  // Re-apply ratings after theming, as ApplyIDETheme may reset font colors.
+  UpdateOllamaModelRating(ComboOllamaModel.Text);
+  UpdateCompletionRating(ComboOllamaCompletionModel.Text);
 end;
 
 procedure TSettingsDialog.LoadSettings;
@@ -135,7 +144,9 @@ begin
   EditOpenAIEndpoint.Text := GSettings.OpenAIEndpoint;
   EditOllamaEndpoint.Text := GSettings.OllamaEndpoint;
   ComboOllamaModel.Text := GSettings.OllamaModel;
+  UpdateOllamaModelRating(GSettings.OllamaModel);
   ComboOllamaCompletionModel.Text := GSettings.OllamaCompletionModel;
+  UpdateCompletionRating(GSettings.OllamaCompletionModel);
   ChkCodeCompletion.Checked := GSettings.CodeCompletionEnabled;
   EditGroqKey.Text := GSettings.GroqAPIKey;
   EditGroqModel.Text := GSettings.GroqModel;
@@ -412,6 +423,159 @@ end;
 procedure TSettingsDialog.BtnLoadModelsClick(Sender: TObject);
 begin
   LoadOllamaModels(False);
+end;
+
+procedure TSettingsDialog.UpdateOllamaModelRating(const AModel: string);
+// Rates how well a model is suited for AI-assisted code generation (chat mode).
+// Color codes (TColor = $00BBGGRR):
+//   Dark green  $00008000  →  RGB(0, 128, 0)   – code-focused model
+//   Teal        $00808000  →  RGB(0, 128, 128)  – capable general model
+//   Orange      $000080C8  →  RGB(200, 128, 0)  – older / weaker
+//   Dark red    $000000C0  →  RGB(192, 0, 0)    – not suited
+//   Gray        $00808080  →  RGB(128, 128, 128) – unknown
+const
+  CLR_CODE    = TColor($00008000);
+  CLR_GENERAL = TColor($00808000);
+  CLR_CAUTION = TColor($000080C8);
+  CLR_BAD     = TColor($000000C0);
+  CLR_UNKNOWN = TColor($00808080);
+var
+  N: string;
+begin
+  N := LowerCase(Trim(AModel));
+  if N = '' then
+  begin
+    LblOllamaModelRating.Caption := '';
+    Exit;
+  end;
+
+  // Embedding / retrieval models — produce no readable text at all
+  if (Pos('embed', N) > 0) or (Pos('minilm', N) > 0) or
+     (Pos('nomic', N) > 0) or (Pos('snowflake', N) > 0) or
+     (Pos('bge-', N) > 0) or (Pos('mxbai', N) > 0) then
+  begin
+    LblOllamaModelRating.Caption := #$25CF + ' Not suited';
+    LblOllamaModelRating.Font.Color := CLR_BAD;
+    Exit;
+  end;
+
+  // Code-focused models — best choice for code generation
+  if (Pos('qwen2.5-coder', N) > 0) or (Pos('qwen2.5coder', N) > 0) or
+     (Pos('codellama', N) > 0) or
+     (Pos('deepseek-coder', N) > 0) or (Pos('deepseek_coder', N) > 0) or
+     (Pos('codegemma', N) > 0) or
+     (Pos('codestral', N) > 0) or
+     (Pos('starcoder', N) > 0) or
+     (Pos('wizardcoder', N) > 0) or
+     (Pos('phind', N) > 0) then
+  begin
+    LblOllamaModelRating.Caption := 'Recommended';
+    LblOllamaModelRating.Font.Color := CLR_CODE;
+    Exit;
+  end;
+
+  // Strong general models with solid code capabilities
+  if (Pos('llama3', N) > 0) or (Pos('llama 3', N) > 0) or
+     (Pos('mistral', N) > 0) or (Pos('mixtral', N) > 0) or
+     (Pos('phi3', N) > 0) or (Pos('phi4', N) > 0) or
+     (Pos('phi-3', N) > 0) or (Pos('phi-4', N) > 0) or
+     (Pos('qwen2.5', N) > 0) or
+     (Pos('gemma2', N) > 0) or (Pos('gemma3', N) > 0) or
+     (Pos('gemma-2', N) > 0) or (Pos('gemma-3', N) > 0) or
+     (Pos('command-r', N) > 0) or
+     (Pos('solar', N) > 0) or
+     (Pos('aya', N) > 0) then
+  begin
+    LblOllamaModelRating.Caption := 'Suitable';
+    LblOllamaModelRating.Font.Color := CLR_GENERAL;
+    Exit;
+  end;
+
+  // Older or weaker models — may struggle with complex code tasks
+  if (Pos('llama2', N) > 0) or (Pos('llama-2', N) > 0) or
+     (Pos('llama:',  N) > 0) or (N = 'llama') or
+     (Pos('phi2', N) > 0) or (Pos('phi-2', N) > 0) or
+     (Pos('phi:',  N) > 0) or (N = 'phi') or
+     (Pos('gemma:', N) > 0) or (N = 'gemma') or
+     (Pos('tinyllama', N) > 0) or
+     (Pos('orca-mini', N) > 0) or (Pos('orca_mini', N) > 0) then
+  begin
+    LblOllamaModelRating.Caption := 'Use with caution';
+    LblOllamaModelRating.Font.Color := CLR_CAUTION;
+    Exit;
+  end;
+
+  LblOllamaModelRating.Caption := 'Unknown';
+  LblOllamaModelRating.Font.Color := CLR_UNKNOWN;
+end;
+
+procedure TSettingsDialog.ComboOllamaModelChange(Sender: TObject);
+begin
+  UpdateOllamaModelRating(ComboOllamaModel.Text);
+end;
+
+procedure TSettingsDialog.UpdateCompletionRating(const AModel: string);
+// Color codes (Delphi TColor = $00BBGGRR):
+//   Dark green  $00008000  →  RGB(0, 128, 0)
+//   Dark red    $000000C0  →  RGB(192, 0, 0)
+//   Orange      $000080C8  →  RGB(200, 128, 0)
+//   Gray        $00808080  →  RGB(128, 128, 128)
+const
+  CLR_GOOD    = TColor($00008000);
+  CLR_BAD     = TColor($000000C0);
+  CLR_CAUTION = TColor($000080C8);
+  CLR_UNKNOWN = TColor($00808080);
+var
+  N: string;
+begin
+  N := LowerCase(Trim(AModel));
+  if N = '' then
+  begin
+    LblCompletionRating.Caption := '';
+    Exit;
+  end;
+
+  // Models specifically designed for code completion / FIM
+  if (Pos('qwen2.5-coder', N) > 0) or (Pos('qwen2.5coder', N) > 0) or
+     (Pos('starcoder', N) > 0) or
+     (Pos('codegemma', N) > 0) or
+     (Pos('codellama', N) > 0) then
+  begin
+    LblCompletionRating.Caption := 'Recommended';
+    LblCompletionRating.Font.Color := CLR_GOOD;
+    Exit;
+  end;
+
+  // Models that sometimes work but are unpredictable for inline completion
+  if (Pos('deepseek-coder', N) > 0) or (Pos('deepseek_coder', N) > 0) or
+     (Pos('deepseek', N) > 0) or
+     (Pos('codeqwen', N) > 0) then
+  begin
+    LblCompletionRating.Caption := 'Use with caution';
+    LblCompletionRating.Font.Color := CLR_CAUTION;
+    Exit;
+  end;
+
+  // General chat/instruction models — not suited for inline completion
+  if (Pos('llama', N) > 0) or (Pos('mistral', N) > 0) or
+     (Pos('phi', N) > 0) or
+     ((Pos('gemma', N) > 0) and (Pos('code', N) = 0)) or
+     (Pos('vicuna', N) > 0) or (Pos('orca', N) > 0) or
+     (Pos('wizard', N) > 0) or (Pos('neural', N) > 0) or
+     (Pos('hermes', N) > 0) or (Pos('mixtral', N) > 0) then
+  begin
+    LblCompletionRating.Caption := 'Not suited';
+    LblCompletionRating.Font.Color := CLR_BAD;
+    Exit;
+  end;
+
+  LblCompletionRating.Caption := 'Unknown';
+  LblCompletionRating.Font.Color := CLR_UNKNOWN;
+end;
+
+procedure TSettingsDialog.ComboOllamaCompletionModelChange(Sender: TObject);
+begin
+  UpdateCompletionRating(ComboOllamaCompletionModel.Text);
 end;
 
 procedure TSettingsDialog.BtnTestOllamaClick(Sender: TObject);

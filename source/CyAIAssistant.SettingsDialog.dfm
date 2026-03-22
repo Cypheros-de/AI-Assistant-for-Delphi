@@ -311,7 +311,7 @@ object SettingsDialog: TSettingsDialog
       object LblOllamaCompletionModel: TLabel
         Left = 16
         Top = 132
-        Width = 100
+        Width = 103
         Height = 15
         Margins.Left = 5
         Margins.Top = 5
@@ -322,16 +322,53 @@ object SettingsDialog: TSettingsDialog
       object LblOllamaInfo: TLabel
         Left = 16
         Top = 196
-        Width = 406
+        Width = 530
         Height = 45
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption =
-          'Install Ollama from https://ollama.ai'#13#10'Then pull a model: ollama' +
-          ' pull codellama'#13#10'Recommended models for code: codellama, deepsee' +
-          'k-coder, qwen2.5-coder'
+        Caption = 
+          'Install Ollama from https://ollama.ai  |  Pull a model: ollama p' +
+          'ull qwen2.5-coder:7b'#13#10'Recommended for Chat: qwen2.5-coder:7b, co' +
+          'dellama:13b, deepseek-coder:6.7b'#13#10'Recommended for Completion: qw' +
+          'en2.5-coder:1.5b, qwen2.5-coder:7b, starcoder2:3b, codellama:7b'
+      end
+      object LblOllamaModelRating: TPanel
+        Left = 448
+        Top = 54
+        Width = 120
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 7
+        StyleElements = [seClient, seBorder]
+      end
+      object LblCompletionRating: TPanel
+        Left = 451
+        Top = 129
+        Width = 120
+        Height = 22
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 6
+        StyleElements = [seClient, seBorder]
       end
       object EditOllamaEndpoint: TEdit
         Left = 200
@@ -347,13 +384,14 @@ object SettingsDialog: TSettingsDialog
       object ComboOllamaModel: TComboBox
         Left = 200
         Top = 54
-        Width = 280
+        Width = 240
         Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
         TabOrder = 1
+        OnChange = ComboOllamaModelChange
       end
       object BtnTestOllama: TButton
         Left = 200
@@ -384,13 +422,27 @@ object SettingsDialog: TSettingsDialog
       object ComboOllamaCompletionModel: TComboBox
         Left = 200
         Top = 129
-        Width = 280
+        Width = 240
         Height = 23
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
         TabOrder = 4
+        OnChange = ComboOllamaCompletionModelChange
+        Items.Strings = (
+          'qwen2.5-coder:1.5b'
+          'qwen2.5-coder:7b'
+          'qwen2.5-coder:14b'
+          'starcoder2:3b'
+          'starcoder2:7b'
+          'codellama:7b'
+          'codellama:13b'
+          'codellama:code'
+          'codegemma:2b'
+          'codegemma:7b'
+          'deepseek-coder:1.3b'
+          'deepseek-coder:6.7b')
       end
       object ChkCodeCompletion: TCheckBox
         Left = 200

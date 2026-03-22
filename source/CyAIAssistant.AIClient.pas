@@ -728,13 +728,14 @@ end;
 function TAIClient.BuildOllamaGenerateJSON(const APrefix: string): string;
 const
   SYSTEM_PROMPT =
-    'You are a Delphi/Pascal code completion engine. ' +
-    'The source code ends with the marker <|cursor|>. ' +
-    'Output ONLY the characters that should appear at <|cursor|>. ' +
-    'NEVER repeat or echo back any text that appears before <|cursor|>. ' +
-    'NEVER add explanations, comments about the code, markdown, or code fences. ' +
-    'Output raw Delphi/Pascal source only. ' +
-    'Stop when the current statement or block is logically complete.';
+    'You are a Delphi/Pascal code completion engine.' + #10 +
+    'Rules (MUST follow):' + #10 +
+    '1. Output ONLY the raw Delphi/Pascal source code that belongs at <|cursor|>.' + #10 +
+    '2. Do NOT repeat, echo, or paraphrase anything that appears before <|cursor|>.' + #10 +
+    '3. Do NOT write any English sentences, explanations, analysis, or suggestions.' + #10 +
+    '4. Do NOT use markdown, code fences, or ``` blocks.' + #10 +
+    '5. Stop as soon as the current statement or block is logically complete.' + #10 +
+    'If you cannot produce a valid completion, output a single semicolon.';
 var
   Root, Options: TJSONObject;
 begin
@@ -744,6 +745,16 @@ begin
     Root.AddPair('system', SYSTEM_PROMPT);
     Root.AddPair('prompt', APrefix + '<|cursor|>');
     Root.AddPair('stream', TJSONBool.Create(True));
+
+    // Stop sequences: halt before the model starts re-generating the whole unit.
+    // These patterns only appear at the start of a new top-level Delphi file.
+    var Stops := TJSONArray.Create;
+    Stops.Add(#10'unit ');
+    Stops.Add(#10'interface'#10);
+    Stops.Add(#10'implementation'#10);
+    Stops.Add('<|cursor|>');
+    Root.AddPair('stop', Stops);
+
     Options := TJSONObject.Create;
     Options.AddPair('temperature', TJSONNumber.Create(0.1));
     Options.AddPair('num_predict', TJSONNumber.Create(256));

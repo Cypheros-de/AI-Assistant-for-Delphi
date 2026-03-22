@@ -103,7 +103,7 @@ implementation
 
 uses
   Vcl.Dialogs, Vcl.Forms,
-  System.IOUtils,
+  System.IOUtils, System.StrUtils,
   CyAIAssistant.PromptDialog,
   CyAIAssistant.NewUnitDialog,
   CyAIAssistant.ChatDialog,
@@ -116,6 +116,101 @@ var
   ChatDlg: TChatDialog;
   PromptDlg: TPromptDialog;
   NewUnitDlg: TNewUnitDialog;
+
+// ---------------------------------------------------------------------------
+// Strips explanatory text that some models (e.g. deepseek-coder) add around
+// code completions.  Strategy:
+//   1. If the output contains ``` fences, extract the first fenced block.
+//   2. Otherwise, drop lines that start with known English prose starters.
+// ---------------------------------------------------------------------------
+
+// Returns the content of the first ``` ... ``` block found in S, or '' if
+// no complete code fence pair is present.
+function ExtractFirstCodeBlock(const S: string): string;
+var
+  P, CodeStart, FenceEnd: Integer;
+begin
+  Result := '';
+  // Find opening fence
+  P := Pos('```', S);
+  if P = 0 then
+    Exit;
+
+  // Skip the opening fence line (language hint etc.) to the next line
+  CodeStart := P + 3;
+  while (CodeStart <= Length(S)) and not (S[CodeStart] in [#10, #13]) do
+    Inc(CodeStart);
+  while (CodeStart <= Length(S)) and (S[CodeStart] in [#10, #13]) do
+    Inc(CodeStart);
+
+  // Find closing fence (search from CodeStart so we skip the opening one)
+  FenceEnd := PosEx('```', S, CodeStart);
+  if FenceEnd = 0 then
+  begin
+    // No closing fence — take everything after the opening fence anyway
+    Result := TrimRight(Copy(S, CodeStart, MaxInt));
+    Exit;
+  end;
+
+  Result := TrimRight(Copy(S, CodeStart, FenceEnd - CodeStart));
+end;
+
+const
+  PROSE_PREFIXES: array[0..30] of string = (
+    'Sure', 'Of course', 'Certainly', 'Absolutely',
+    'It seems', 'It looks', 'It appears', 'It is ',
+    'The code', 'The above', 'The following', 'The corrected',
+    'Note that', 'Note:', 'Also note', 'Also,', 'Also ',
+    'Please ', 'However,', 'However ', 'Here is', 'Here''s',
+    'This code', 'This will', 'This is', 'This should',
+    'Make sure', 'Ensure ', 'Check ', 'You need', 'You can');
+
+function IsProseLineS(const Line: string): Boolean;
+var
+  I: Integer;
+  T: string;
+begin
+  T := TrimLeft(Line);
+  for I := Low(PROSE_PREFIXES) to High(PROSE_PREFIXES) do
+    if Copy(T, 1, Length(PROSE_PREFIXES[I])) = PROSE_PREFIXES[I] then
+      Exit(True);
+  Result := False;
+end;
+
+function CleanCompletion(const S: string): string;
+var
+  Lines: TStringList;
+  SB: TStringBuilder;
+  I: Integer;
+  Block: string;
+begin
+  // Strategy 1: extract content from the first ``` block
+  if Pos('```', S) > 0 then
+  begin
+    Block := ExtractFirstCodeBlock(S);
+    if Block <> '' then
+    begin
+      Result := Block;
+      Exit;
+    end;
+  end;
+
+  // Strategy 2: drop lines that are obviously English prose
+  Lines := TStringList.Create;
+  SB := TStringBuilder.Create;
+  try
+    Lines.Text := S;
+    for I := 0 to Lines.Count - 1 do
+      if not IsProseLineS(Lines[I]) then
+        SB.AppendLine(Lines[I]);
+    Result := TrimRight(SB.ToString);
+    if Result = '' then
+      Result := TrimRight(S); // fallback: return as-is
+  finally
+    Lines.Free;
+    SB.Free;
+  end;
+end;
 
 // TCPUMonitorThread
 
@@ -883,6 +978,8 @@ begin
       Completion := AResult;
       // Remove cursor marker if the model echoed it back
       Completion := StringReplace(Completion, '<|cursor|>', '', [rfReplaceAll]);
+      // Strip explanations / extract from code fences (handles deepseek-coder etc.)
+      Completion := CleanCompletion(Completion);
       // Strip leading line break the model may add
       while (Length(Completion) > 0) and (Completion[1] in [#13, #10]) do
         Delete(Completion, 1, 1);
@@ -895,6 +992,18 @@ begin
         Delete(Completion, 1, Length(PartialLine));
       if Trim(Completion) = '' then
         Exit;
+      // Sanity check: reject if the model regenerated the whole unit file.
+      // A valid inline completion never starts with "unit <Name>" or contains
+      // the standalone "interface" / "implementation" section keywords.
+      if (Copy(TrimLeft(Completion), 1, 5) = 'unit ') or
+         (Pos(#10'interface'#10, Completion) > 0) or
+         (Pos(#10'implementation'#10, Completion) > 0) then
+      begin
+        ShowMessage('The model generated an entire unit instead of a completion.' + sLineBreak +
+          'Consider using a smaller, faster model designed for code completion' + sLineBreak +
+          '(e.g. codellama:7b or qwen2.5-coder:1.5b).');
+        Exit;
+      end;
       View := SrcEditor.EditViews[0];
       View.Position.InsertText(Completion);
       View.Paint;
