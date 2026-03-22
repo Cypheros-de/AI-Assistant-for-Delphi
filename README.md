@@ -37,6 +37,31 @@ Select any code in the editor, open the Code Assistant, and apply an AI transfor
 
 ---
 
+### Code Completion — Inline AI Completion at the Cursor
+
+Press **Ctrl+Alt+Space** (or use the right-click menu) to let a local Ollama model complete the code at the cursor position.
+
+- **Ollama-only** — runs entirely on the local machine, nothing leaves the development PC
+- **Dedicated completion model** — a separate model can be configured for completion, independent of the chat model; smaller, faster models work best
+- **Enable / disable toggle** — the feature is off by default and can be switched on in Settings → Ollama
+- **Cancel with Escape** — press Esc at any time to abort a running completion
+- **Model suitability indicator** — the Settings dialog shows a colour-coded rating next to each model selector so it is immediately clear whether a model is suited for completion or chat-based code generation
+- Garbage detection: if the model generates an entire unit definition instead of a short completion, the result is rejected and the editor is left untouched
+- Post-processing strips markdown code fences and common explanation text that some models add around their output
+
+#### Recommended completion models (via `ollama pull`)
+
+| Model | Size | Notes |
+|---|---|---|
+| `qwen2.5-coder:1.5b` | ~1 GB | Fastest, good for simple completions |
+| `qwen2.5-coder:7b` | ~5 GB | Best balance of speed and quality |
+| `starcoder2:3b` | ~2 GB | Purpose-built for completion |
+| `codellama:7b` | ~4 GB | Classic, reliable |
+
+> **Note:** `deepseek-coder` and general chat models (llama, mistral, phi…) tend to generate explanatory prose or entire unit definitions instead of inline completions and are not recommended for this feature.
+
+---
+
 ### AI Chat — Multi-Turn Conversation
 
 A persistent chat window for open-ended work with the AI.
@@ -59,6 +84,20 @@ Describe what you need and let the AI write the whole unit.
 - Preview the generated code before creating the unit
 - **Create Unit in IDE** — injects the generated code directly into a new editor window
 - Editable result — tweak the AI output in-place before accepting it
+
+---
+
+### CPU & GPU Usage Graphs (Local Model Monitoring)
+
+When using a local Ollama model, the Chat, Code Assistant and Unit/Class Assistant dialogs display a live system usage panel at the bottom of the window.
+
+- **CPU usage** — percentage updated every second
+- **GPU usage** — percentage of GPU compute utilisation (hardware GPUs only, software renderers excluded)
+- **VRAM usage** — dedicated video memory used vs. total, shown as a percentage and in MB
+- Monitoring runs on a background thread so the UI stays responsive during AI inference
+- The panel is always visible when a dialog is open, regardless of the active provider — useful for spotting when the local GPU is saturated
+
+This makes it easy to see in real time whether the model is running on the GPU or falling back to CPU, and how much VRAM headroom is left for larger models.
 
 ---
 
