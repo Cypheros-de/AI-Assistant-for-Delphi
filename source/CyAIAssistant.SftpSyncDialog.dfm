@@ -741,7 +741,7 @@ object SftpSyncDialog: TSftpSyncDialog
       Margins.Right = 5
       Margins.Bottom = 5
       Caption = 'Log'
-      object MemoLog: TMemo
+      object MemoLog: TRichEdit
         Left = 0
         Top = 0
         Width = 642
@@ -751,7 +751,7 @@ object SftpSyncDialog: TSftpSyncDialog
         Margins.Right = 5
         Margins.Bottom = 5
         Align = alClient
-        Font.Charset = DEFAULT_CHARSET
+        Font.Charset = ANSI_CHARSET
         Font.Color = clWindowText
         Font.Height = -11
         Font.Name = 'Consolas'
@@ -761,6 +761,7 @@ object SftpSyncDialog: TSftpSyncDialog
         ScrollBars = ssVertical
         TabOrder = 0
         WordWrap = False
+        StyleElements = [seClient, seBorder]
       end
       object PanelLogBtns: TPanel
         Left = 0

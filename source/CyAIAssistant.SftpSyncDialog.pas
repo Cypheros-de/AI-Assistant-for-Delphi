@@ -82,7 +82,7 @@ type
     CheckPermOtherExec: TCheckBox;
     // Tab: Log
     TabLog: TTabSheet;
-    MemoLog: TMemo;
+    MemoLog: TRichEdit;
     PanelLogBtns: TPanel;
     BtnClearLog: TButton;
     GroupBoxPermissions: TGroupBox;
@@ -102,6 +102,7 @@ type
   private
     StatusColor: Cardinal;
     procedure UpdateStatusUI;
+    procedure LogAppend(const AMsg: string);
     procedure OnSyncLog(const AMsg: string);
     procedure NotifyIDEIfOpen(const ALocalPath: string);
     procedure LoadSettings;
@@ -173,7 +174,7 @@ begin
   // Replay buffered log lines from before this dialog was opened
   if GSftpSync.LogBuffer.Count > 0 then
     for i := 0 to GSftpSync.LogBuffer.Count - 1 do
-      MemoLog.Lines.Add(GSftpSync.LogBuffer[i]);
+      LogAppend(GSftpSync.LogBuffer[i]);
 
   GSftpSync.OnLog := OnSyncLog;
   GSftpSync.OnNotifyFile := NotifyIDEIfOpen;
@@ -225,11 +226,55 @@ begin
   BtnPullAll.Enabled := CanForce;
 end;
 
+procedure TSftpSyncDialog.LogAppend(const AMsg: string);
+const
+  // Upload lines
+  COLOR_UP   = TColor($0040C040); // green
+  // Download lines
+  COLOR_DOWN = TColor($00C08020); // blue
+  // Failures / errors
+  COLOR_ERR  = TColor($002020D0); // red
+  // Backup / info
+  COLOR_INFO = TColor($0020A0C0); // amber
+var
+  T: string;
+  C: TColor;
+  StartPos, EndPos: Integer;
+begin
+  T := Trim(AMsg);
+  if (Pos('[UP]', T) > 0) or (Pos('[PUSH', T) > 0) then
+    C := COLOR_UP
+  else if (Pos('[DOWN]', T) > 0) or (Pos('[PULL', T) > 0) then
+    C := COLOR_DOWN
+  else if (Pos('FAILED', T) > 0) or (Pos('error', T) > 0) or
+          (Pos('Error', T) > 0) or (Pos('Connect failed', T) > 0) then
+    C := COLOR_ERR
+  else if (Pos('[BACKUP]', T) > 0) or (Pos('Push All', T) > 0) or
+          (Pos('Pull All', T) > 0) then
+    C := COLOR_INFO
+  else
+    C := GetIDEThemeGetColor(MemoLog.Font.Color);
+
+  MemoLog.SelStart  := MaxInt;
+  StartPos := MemoLog.SelStart;
+  MemoLog.SelLength := 0;
+  MemoLog.SelText   := AMsg + #13#10;
+  EndPos := MemoLog.SelStart;
+
+  MemoLog.SelStart  := StartPos;
+  MemoLog.SelLength := EndPos - StartPos;
+  MemoLog.SelAttributes.Name  := MemoLog.Font.Name;
+  MemoLog.SelAttributes.Color := C;
+  MemoLog.SelLength := 0;
+  MemoLog.SelStart  := EndPos;
+
+  SendMessage(MemoLog.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+end;
+
 procedure TSftpSyncDialog.OnSyncLog(const AMsg: string);
 begin
   // Always called on the main thread (TThread.Synchronize inside engine)
-  MemoLog.Lines.Add(AMsg);
-  SendMessage(MemoLog.Handle, WM_VSCROLL, SB_BOTTOM, 0);
+  LogAppend(AMsg);
 end;
 
 procedure TSftpSyncDialog.NotifyIDEIfOpen(const ALocalPath: string);
