@@ -475,7 +475,7 @@ end;
 
 procedure TChatDialog.ParseFilesFromResponse(const AResponse: string);
 const
-  KNOWN_EXTS: array [0 .. 7] of string = ('.pas', '.dpr', '.dpk', '.dfm', '.dproj', '.groupproj', '.ini', '.txt');
+  KNOWN_EXTS: array [0 .. 8] of string = ('.pas', '.dpr', '.dpk', '.dfm', '.dproj', '.groupproj', '.ini', '.txt', '.svg');
 var
   Lines: TStringList;
   i, J: Integer;
@@ -490,12 +490,59 @@ var
   ValidExt: Boolean;
   PrevNonBlank: string;
 
+  function IsSVGContent(const AContent: string): Boolean;
+  begin
+    Result := TRegEx.IsMatch(AContent, '<svg[\s>]', [roIgnoreCase]);
+  end;
+
+  // Returns AName unchanged if it is not already in FDetectedFiles, otherwise
+  // appends _2, _3, … before the extension until the name is unique.
+  function UniqueFileName(const AName: string): string;
+  var
+    Base, Ext, Candidate: string;
+    N, K: Integer;
+    Taken: Boolean;
+  begin
+    Ext  := TPath.GetExtension(AName);
+    Base := TPath.GetFileNameWithoutExtension(AName);
+    Candidate := AName;
+    N := 2;
+    repeat
+      Taken := False;
+      for K := 0 to FDetectedFiles.Count - 1 do
+        if SameText(FDetectedFiles[K].FileName, Candidate) then
+        begin
+          Taken := True;
+          Break;
+        end;
+      if Taken then
+      begin
+        Candidate := Base + '_' + IntToStr(N) + Ext;
+        Inc(N);
+      end;
+    until not Taken;
+    Result := Candidate;
+  end;
+
   function GuessNameFromContent(const AContent: string): string;
   var
     M: TMatch;
     Kind: string;
+    IdAttr: TMatch;
   begin
     Result := '';
+    // SVG: extract id attribute for the filename, or fall back to 'image.svg'
+    if IsSVGContent(AContent) then
+    begin
+      IdAttr := TRegEx.Match(AContent, '<svg[^>]*\bid=[''"]([A-Za-z0-9_.-]+)[''"]',
+        [roIgnoreCase]);
+      if IdAttr.Success then
+        Result := IdAttr.Groups[1].Value + '.svg'
+      else
+        Result := 'image.svg';
+      Exit;
+    end;
+    // Pascal / Delphi unit
     M := TRegEx.Match(AContent, '^\s*(unit|program|package)\s+([A-Za-z0-9_.]+)\s*;',
       [roIgnoreCase, roMultiLine]);
     if M.Success then
@@ -508,23 +555,30 @@ var
   end;
 
   // Parse the filename hint from a fence-opening line (everything after ```).
+  // Also recognises bare 'svg' / 'xml' language tags and returns 'image.svg'
+  // as a default so the block is not silently dropped when the AI omits a name.
   function ParseFenceFileName(const AFenceLine: string): string;
   var
     P: TArray<string>;
-    Ext: string;
+    Ext, Token: string;
     K: Integer;
   begin
     Result := '';
     P := AFenceLine.Split([' ', #9], TStringSplitOptions.ExcludeEmpty);
     for K := 0 to High(P) do
     begin
-      Ext := LowerCase(TPath.GetExtension(P[K]));
+      Token := P[K];
+      Ext   := LowerCase(TPath.GetExtension(Token));
+      // Explicit filename with known extension
       for var KnownExt in KNOWN_EXTS do
         if Ext = KnownExt then
         begin
-          Result := P[K];
+          Result := Token;
           Exit;
         end;
+      // Bare language tag 'svg' or 'xml' → treat block as SVG
+      if SameText(Token, 'svg') or SameText(Token, 'xml') then
+        Result := '__svg__'; // sentinel; real name resolved later from content
     end;
   end;
 
@@ -540,10 +594,33 @@ var
     K: Integer;
     SLine, SPrev: string;
     SegSB: TStringBuilder;
-    SegContent, SegName: string;
-    IsFirst: Boolean;
+    SegContent, SegName, ResolvedFenceFile: string;
+    IsFirst, IsSVG: Boolean;
   begin
     if Trim(AContent) = '' then Exit;
+
+    // Resolve the __svg__ sentinel: real name comes from content or stays image.svg
+    if AFenceFile = '__svg__' then
+      ResolvedFenceFile := GuessNameFromContent(AContent)
+    else
+      ResolvedFenceFile := AFenceFile;
+
+    IsSVG := IsSVGContent(AContent);
+
+    // SVG is a single blob — save it as-is without Pascal boundary splitting.
+    if IsSVG then
+    begin
+      SegName := IfThen(ResolvedFenceFile <> '', ResolvedFenceFile,
+                        GuessNameFromContent(AContent));
+      if SegName <> '' then
+      begin
+        DF.FileName := UniqueFileName(SegName);
+        DF.Content  := AContent;
+        FDetectedFiles.Add(DF);
+      end;
+      Exit;
+    end;
+
     SLines := TStringList.Create;
     SegSB  := TStringBuilder.Create;
     try
@@ -560,11 +637,11 @@ var
              [roIgnoreCase]) then
         begin
           SegContent := SegSB.ToString;
-          SegName := IfThen(IsFirst and (AFenceFile <> ''), AFenceFile,
+          SegName := IfThen(IsFirst and (ResolvedFenceFile <> ''), ResolvedFenceFile,
                             GuessNameFromContent(SegContent));
           if (Trim(SegContent) <> '') and (SegName <> '') then
           begin
-            DF.FileName := SegName;
+            DF.FileName := UniqueFileName(SegName);
             DF.Content  := SegContent;
             FDetectedFiles.Add(DF);
           end;
@@ -577,11 +654,11 @@ var
       end;
       // Remaining segment
       SegContent := SegSB.ToString;
-      SegName := IfThen(IsFirst and (AFenceFile <> ''), AFenceFile,
+      SegName := IfThen(IsFirst and (ResolvedFenceFile <> ''), ResolvedFenceFile,
                         GuessNameFromContent(SegContent));
       if (Trim(SegContent) <> '') and (SegName <> '') then
       begin
-        DF.FileName := SegName;
+        DF.FileName := UniqueFileName(SegName);
         DF.Content  := SegContent;
         FDetectedFiles.Add(DF);
       end;
