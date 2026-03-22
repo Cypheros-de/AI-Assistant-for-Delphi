@@ -42,6 +42,10 @@ type
     EditOllamaEndpoint: TEdit;
     ComboOllamaModel: TComboBox;
     BtnTestOllama: TButton;
+    BtnLoadModels: TButton;
+    LblOllamaCompletionModel: TLabel;
+    ComboOllamaCompletionModel: TComboBox;
+    ChkCodeCompletion: TCheckBox;
     TabGroq: TTabSheet;
     LblGroqKey: TLabel;
     LblGroqModel: TLabel;
@@ -95,6 +99,7 @@ type
     procedure BtnMoveDownClick(Sender: TObject);
     procedure BtnClearFieldsClick(Sender: TObject);
     procedure BtnTestOllamaClick(Sender: TObject);
+    procedure BtnLoadModelsClick(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
@@ -130,6 +135,8 @@ begin
   EditOpenAIEndpoint.Text := GSettings.OpenAIEndpoint;
   EditOllamaEndpoint.Text := GSettings.OllamaEndpoint;
   ComboOllamaModel.Text := GSettings.OllamaModel;
+  ComboOllamaCompletionModel.Text := GSettings.OllamaCompletionModel;
+  ChkCodeCompletion.Checked := GSettings.CodeCompletionEnabled;
   EditGroqKey.Text := GSettings.GroqAPIKey;
   EditGroqModel.Text := GSettings.GroqModel;
   EditGroqEndpoint.Text := GSettings.GroqEndpoint;
@@ -155,6 +162,8 @@ begin
   GSettings.OpenAIEndpoint := Trim(EditOpenAIEndpoint.Text);
   GSettings.OllamaEndpoint := Trim(EditOllamaEndpoint.Text);
   GSettings.OllamaModel := Trim(ComboOllamaModel.Text);
+  GSettings.OllamaCompletionModel := Trim(ComboOllamaCompletionModel.Text);
+  GSettings.CodeCompletionEnabled := ChkCodeCompletion.Checked;
   GSettings.GroqAPIKey := Trim(EditGroqKey.Text);
   GSettings.GroqModel := Trim(EditGroqModel.Text);
   GSettings.GroqEndpoint := Trim(EditGroqEndpoint.Text);
@@ -307,6 +316,7 @@ var
   Name: string;
   i: Integer;
   PrevModel: string;
+  PrevCompletionModel: string;
 begin
   BaseURL := Trim(EditOllamaEndpoint.Text);
   if BaseURL = '' then
@@ -317,6 +327,7 @@ begin
   end;
   BaseURL := GetOllamaBaseURL(BaseURL);
   PrevModel := Trim(ComboOllamaModel.Text);
+  PrevCompletionModel := Trim(ComboOllamaCompletionModel.Text);
   HTTP := THTTPClient.Create;
   try
     HTTP.ConnectionTimeout := 3000;
@@ -345,8 +356,10 @@ begin
           Exit;
         end;
         ComboOllamaModel.Items.BeginUpdate;
+        ComboOllamaCompletionModel.Items.BeginUpdate;
         try
           ComboOllamaModel.Items.Clear;
+          ComboOllamaCompletionModel.Items.Clear;
           for i := 0 to Models.Count - 1 do
           begin
             ModelObj := Models.Items[i] as TJSONObject;
@@ -354,11 +367,15 @@ begin
             begin
               Name := ModelObj.GetValue<string>('name', '');
               if Name <> '' then
+              begin
                 ComboOllamaModel.Items.Add(Name);
+                ComboOllamaCompletionModel.Items.Add(Name);
+              end;
             end;
           end;
         finally
           ComboOllamaModel.Items.EndUpdate;
+          ComboOllamaCompletionModel.Items.EndUpdate;
         end;
         if ComboOllamaModel.Items.Count > 0 then
         begin
@@ -367,6 +384,14 @@ begin
             ComboOllamaModel.ItemIndex := i
           else
             ComboOllamaModel.ItemIndex := 0;
+        end;
+        if ComboOllamaCompletionModel.Items.Count > 0 then
+        begin
+          i := ComboOllamaCompletionModel.Items.IndexOf(PrevCompletionModel);
+          if i >= 0 then
+            ComboOllamaCompletionModel.ItemIndex := i
+          else
+            ComboOllamaCompletionModel.ItemIndex := 0;
         end;
         if not ASilent then
           ShowMessage(IntToStr(ComboOllamaModel.Items.Count) + ' model(s) loaded from Ollama.');
@@ -382,6 +407,11 @@ begin
   finally
     HTTP.Free;
   end;
+end;
+
+procedure TSettingsDialog.BtnLoadModelsClick(Sender: TObject);
+begin
+  LoadOllamaModels(False);
 end;
 
 procedure TSettingsDialog.BtnTestOllamaClick(Sender: TObject);

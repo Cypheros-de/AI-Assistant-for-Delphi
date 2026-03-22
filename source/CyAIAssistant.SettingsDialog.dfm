@@ -308,16 +308,27 @@ object SettingsDialog: TSettingsDialog
         Margins.Bottom = 5
         Caption = 'Model:'
       end
+      object LblOllamaCompletionModel: TLabel
+        Left = 16
+        Top = 132
+        Width = 100
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Completion Model:'
+      end
       object LblOllamaInfo: TLabel
         Left = 16
-        Top = 135
+        Top = 196
         Width = 406
         Height = 45
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption = 
+        Caption =
           'Install Ollama from https://ollama.ai'#13#10'Then pull a model: ollama' +
           ' pull codellama'#13#10'Recommended models for code: codellama, deepsee' +
           'k-coder, qwen2.5-coder'
@@ -347,7 +358,7 @@ object SettingsDialog: TSettingsDialog
       object BtnTestOllama: TButton
         Left = 200
         Top = 90
-        Width = 160
+        Width = 130
         Height = 26
         Margins.Left = 5
         Margins.Top = 5
@@ -356,6 +367,42 @@ object SettingsDialog: TSettingsDialog
         Caption = 'Test Connection'
         TabOrder = 2
         OnClick = BtnTestOllamaClick
+      end
+      object BtnLoadModels: TButton
+        Left = 338
+        Top = 90
+        Width = 120
+        Height = 26
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Load Models'
+        TabOrder = 3
+        OnClick = BtnLoadModelsClick
+      end
+      object ComboOllamaCompletionModel: TComboBox
+        Left = 200
+        Top = 129
+        Width = 280
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 4
+      end
+      object ChkCodeCompletion: TCheckBox
+        Left = 200
+        Top = 161
+        Width = 340
+        Height = 21
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Enable Code Completion (Ctrl+Alt+Space)'
+        TabOrder = 5
       end
     end
     object TabGroq: TTabSheet

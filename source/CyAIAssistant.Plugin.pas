@@ -17,9 +17,10 @@
 interface
 
 uses
-  System.SysUtils, System.Classes, System.SyncObjs,
-  Vcl.Menus, Vcl.ActnList, Vcl.ExtCtrls,
-  ToolsAPI, CyAIAssistant.GPUMonitor;
+  System.SysUtils, System.Classes, System.SyncObjs, System.UITypes,
+  Winapi.Windows, Winapi.Messages,
+  Vcl.Menus, Vcl.ActnList, Vcl.ExtCtrls, Vcl.AppEvnts,
+  ToolsAPI, CyAIAssistant.AIClient, CyAIAssistant.GPUMonitor;
 
 type
   // Polls TThread.GetCPUUsage every 500 ms on a background thread.
@@ -57,8 +58,9 @@ type
     // Tools menu items
     FMenuItemSettings: TMenuItem;
     FMenuItemNewUnit: TMenuItem;
-    FMenuItemSftpSync: TMenuItem; // enabled only when a project is open
-    FMenuItemCodeAssist: TMenuItem; // enabled only when an editor file is open
+    FMenuItemSftpSync: TMenuItem;    // enabled only when a project is open
+    FMenuItemCodeAssist: TMenuItem;  // enabled only when an editor file is open
+    FMenuItemCompletion: TMenuItem;  // enabled only when editor open + completion enabled
     FSeparator: TMenuItem;
 
     // Editor popup hook
@@ -67,6 +69,9 @@ type
 
     FTimer: TTimer;
     FCPUThread: TCPUMonitorThread;
+    FCompletionClient: TAIClient;
+    FAppEvents: TApplicationEvents;
+    FCompletionRunning: Boolean;
     FInstalled: Boolean;
 
     procedure OnTimer(Sender: TObject);
@@ -81,6 +86,8 @@ type
     procedure OnSettingsClick(Sender: TObject);
     procedure OnAboutClick(Sender: TObject);
     procedure OnChatClick(Sender: TObject);
+    procedure OnCodeCompletionClick(Sender: TObject);
+    procedure OnAppMessage(var Msg: tagMSG; var Handled: Boolean);
     function HasOpenProject: Boolean;
     function FindEditorPopup: TPopupMenu;
     function GetSelectedText: string;
@@ -96,6 +103,7 @@ implementation
 
 uses
   Vcl.Dialogs, Vcl.Forms,
+  System.IOUtils,
   CyAIAssistant.PromptDialog,
   CyAIAssistant.NewUnitDialog,
   CyAIAssistant.ChatDialog,
@@ -224,6 +232,9 @@ constructor TCyAIAssistantPlugin.Create;
 begin
   inherited;
   FInstalled := False;
+  FCompletionClient := TAIClient.Create;
+  FAppEvents := TApplicationEvents.Create(nil);
+  FAppEvents.OnMessage := OnAppMessage;
   FCPUThread := TCPUMonitorThread.Create;
   FCPUThread.OnMonitor := OnMonitor;
   FTimer := TTimer.Create(nil);
@@ -236,6 +247,9 @@ destructor TCyAIAssistantPlugin.Destroy;
 begin
   // Disable timer immediately to prevent any pending callbacks firing
   // after we start tearing down.  Free it before touching anything else.
+  FreeAndNil(FCompletionClient);
+  FreeAndNil(FAppEvents);
+
   if Assigned(FCPUThread) then
   begin
     FCPUThread.Stop;
@@ -274,7 +288,8 @@ begin
   // separately — it is already gone at that point.
   //
   // We nil FMenuItemSettings first so the block below never double-frees it.
-  FMenuItemSettings := nil; // owned by FMenuItemNewUnit — freed with it
+  FMenuItemSettings := nil;   // owned by FMenuItemNewUnit — freed with it
+  FMenuItemCompletion := nil; // owned by FMenuItemNewUnit — freed with it
 
   if Assigned(FMenuItemNewUnit) then
   begin
@@ -322,6 +337,8 @@ begin
     FMenuItemSftpSync.Enabled := HasOpenProject;
   if Assigned(FMenuItemCodeAssist) then
     FMenuItemCodeAssist.Enabled := (GetCurrentEditor <> nil);
+  if Assigned(FMenuItemCompletion) then
+    FMenuItemCompletion.Enabled := (GetCurrentEditor <> nil) and GSettings.CodeCompletionEnabled;
 end;
 
 function TCyAIAssistantPlugin.HasOpenProject: Boolean;
@@ -420,6 +437,13 @@ begin
   FMenuItemSettings.OnClick := OnAIAssistFromToolsClick;
   FMenuItemNewUnit.Insert(FMenuItemNewUnit.Count, FMenuItemSettings);
   FMenuItemCodeAssist := FMenuItemSettings;
+
+  FMenuItemCompletion := TMenuItem.Create(FMenuItemNewUnit);
+  FMenuItemCompletion.Caption := 'Code Completion';
+  FMenuItemCompletion.ShortCut := TextToShortCut('Ctrl+Alt+Space');
+  FMenuItemCompletion.Enabled := False; // enabled when editor open + completion enabled
+  FMenuItemCompletion.OnClick := OnCodeCompletionClick;
+  FMenuItemNewUnit.Insert(FMenuItemNewUnit.Count, FMenuItemCompletion);
 
   SubItem := TMenuItem.Create(FMenuItemNewUnit);
   SubItem.Caption := 'Unit/Class Assistant';
@@ -561,6 +585,17 @@ begin
   ItemChat.Caption := 'AI Chat...';
   ItemChat.OnClick := OnChatClick;
   SubMenu.Add(ItemChat);
+
+  // "Code Completion" — only shown when feature is enabled
+  if GSettings.CodeCompletionEnabled then
+  begin
+    Item := TMenuItem.Create(nil);
+    Item.Tag := TAG_AI;
+    Item.Caption := 'Code Completion';
+    Item.ShortCut := TextToShortCut('Ctrl+Alt+Space');
+    Item.OnClick := OnCodeCompletionClick;
+    SubMenu.Add(Item);
+  end;
 end;
 
 // --- Editor / selection helpers ---
@@ -703,6 +738,167 @@ begin
     ChatDlg.Free;
     ChatDlg := nil;
   end;
+end;
+
+procedure TCyAIAssistantPlugin.OnAppMessage(var Msg: tagMSG; var Handled: Boolean);
+begin
+  if Msg.message = WM_KEYDOWN then
+  begin
+    // ESC aborts a running code completion
+    if (Msg.wParam = VK_ESCAPE) and FCompletionRunning then
+    begin
+      FCompletionClient.Cancel;
+      FCompletionRunning := False;
+      Screen.Cursor := crDefault;
+      Handled := True;
+      Exit;
+    end;
+
+    // Ctrl+Alt+Space triggers code completion
+    if (Msg.wParam = VK_SPACE) and
+       (GetKeyState(VK_CONTROL) < 0) and
+       (GetKeyState(VK_MENU) < 0) and   // VK_MENU = Alt
+       GSettings.CodeCompletionEnabled then
+    begin
+      Handled := True;
+      OnCodeCompletionClick(nil);
+    end;
+  end;
+end;
+
+procedure TCyAIAssistantPlugin.OnCodeCompletionClick(Sender: TObject);
+var
+  SrcEditor: IOTASourceEditor;
+  EditView: IOTAEditView;
+  Source: string;
+  Lines: TStringList;
+  CursorPos: TOTAEditPos;
+  I, LineIdx, LastNL: Integer;
+  Prefix, Suffix, LineStr, PartialLine: string;
+begin
+  if not GSettings.CodeCompletionEnabled then
+  begin
+    ShowMessage('Code completion is disabled.' + sLineBreak +
+      'Enable it in Settings > Ollama (Local).');
+    Exit;
+  end;
+
+  if Trim(GSettings.OllamaCompletionModel) = '' then
+  begin
+    ShowMessage('No completion model selected.' + sLineBreak +
+      'Please choose a model in Settings > Ollama (Local) > Completion Model.');
+    Exit;
+  end;
+
+  SrcEditor := GetCurrentEditor;
+  if SrcEditor = nil then
+  begin
+    ShowMessage('No active source editor.');
+    Exit;
+  end;
+  if SrcEditor.EditViewCount = 0 then
+    Exit;
+
+  EditView := SrcEditor.EditViews[0];
+  CursorPos := EditView.CursorPos;
+
+  // Read source from disk (cursor position comes from the live EditView)
+  if SrcEditor.FileName = '' then
+    Exit; // unsaved new file — no context to complete
+  try
+    Source := TFile.ReadAllText(SrcEditor.FileName, TEncoding.UTF8);
+  except
+    Exit;
+  end;
+
+  if Source = '' then
+    Exit;
+
+  // Split source into prefix (before cursor) and suffix (after cursor)
+  Lines := TStringList.Create;
+  try
+    Lines.Text := Source;
+    Prefix := '';
+    Suffix := '';
+    LineIdx := CursorPos.Line - 1; // convert 1-based to 0-based
+
+    for I := 0 to LineIdx - 1 do
+      if I < Lines.Count then
+        Prefix := Prefix + Lines[I] + Lines.LineBreak;
+
+    if LineIdx < Lines.Count then
+    begin
+      LineStr := Lines[LineIdx];
+      Prefix := Prefix + Copy(LineStr, 1, CursorPos.Col - 1);
+      Suffix := Copy(LineStr, CursorPos.Col, MaxInt);
+      for I := LineIdx + 1 to Lines.Count - 1 do
+        Suffix := Suffix + Lines.LineBreak + Lines[I];
+    end;
+  finally
+    Lines.Free;
+  end;
+
+  // Capture the partial current line (trimmed) for deduplication in callback.
+  // Models often echo the partial line back at the start of their completion.
+  LastNL := 0;
+  for I := Length(Prefix) downto 1 do
+    if Prefix[I] in [#13, #10] then
+    begin
+      LastNL := I;
+      Break;
+    end;
+  PartialLine := TrimLeft(Copy(Prefix, LastNL + 1, MaxInt));
+
+  // Limit context to keep requests fast
+  if Length(Prefix) > 2000 then
+    Prefix := Copy(Prefix, Length(Prefix) - 1999, 2000);
+  if Length(Suffix) > 500 then
+    Suffix := Copy(Suffix, 1, 500);
+
+  Screen.Cursor := crHourGlass;
+  FCompletionRunning := True;
+
+  FCompletionClient.SendCompletionAsync(Prefix, Suffix,
+    procedure(const AResult, AError: string)
+    var
+      View: IOTAEditView;
+      Completion: string;
+    begin
+      FCompletionRunning := False;
+      Screen.Cursor := crDefault;
+      if AError <> '' then
+      begin
+        ShowMessage('Code completion error:' + sLineBreak + AError);
+        Exit;
+      end;
+      if Trim(AResult) = '' then
+      begin
+        ShowMessage('The model returned no completion.' + sLineBreak +
+          'Try a different model in Settings > Ollama (Local) > Completion Model.' + sLineBreak +
+          'Model used: ' + GSettings.OllamaCompletionModel);
+        Exit;
+      end;
+      if SrcEditor.EditViewCount = 0 then
+        Exit;
+      Completion := AResult;
+      // Remove cursor marker if the model echoed it back
+      Completion := StringReplace(Completion, '<|cursor|>', '', [rfReplaceAll]);
+      // Strip leading line break the model may add
+      while (Length(Completion) > 0) and (Completion[1] in [#13, #10]) do
+        Delete(Completion, 1, 1);
+      // Strip echoed partial line: models often repeat the incomplete line
+      // from the prefix at the start of their output (e.g. "X := " → "X := value").
+      // TrimLeft because the model usually omits leading whitespace.
+      if (PartialLine <> '') and
+         (Length(Completion) >= Length(PartialLine)) and
+         (Copy(Completion, 1, Length(PartialLine)) = PartialLine) then
+        Delete(Completion, 1, Length(PartialLine));
+      if Trim(Completion) = '' then
+        Exit;
+      View := SrcEditor.EditViews[0];
+      View.Position.InsertText(Completion);
+      View.Paint;
+    end);
 end;
 
 end.

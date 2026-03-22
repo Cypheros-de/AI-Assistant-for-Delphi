@@ -53,6 +53,11 @@ type
     procedure SendOllamaChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
     procedure SendOpenAICompatibleChat(const AHistory: TArray<TChatMessage>; const AEndpoint, AAPIKey, AModel: string; ACallback: TAIResultCallback);
 
+    // Ollama code completion via /api/generate
+    procedure SendOllamaGenerate(const APrefix, ASuffix: string; ACallback: TAIResultCallback);
+    function BuildOllamaGenerateJSON(const APrefix: string): string;
+    function ReadOllamaGenerateStream(const AStreamData: string): string;
+
     // JSON builders
     function BuildClaudeJSON(const APrompt: string): string;
     function BuildOpenAIJSON(const APrompt: string): string;
@@ -85,6 +90,9 @@ type
 
     // Multi-turn chat
     procedure SendChatAsync(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
+
+    // Ollama-only code completion using /api/generate with FIM (fill-in-middle)
+    procedure SendCompletionAsync(const APrefix, ASuffix: string; ACallback: TAIResultCallback);
   end;
 
 implementation
@@ -710,6 +718,132 @@ begin
     procedure
     begin
       ACallback(ResultText, ErrorText);
+    end);
+end;
+
+// ---------------------------------------------------------------------------
+// Ollama code completion via /api/generate (FIM — fill-in-middle)
+// ---------------------------------------------------------------------------
+
+function TAIClient.BuildOllamaGenerateJSON(const APrefix: string): string;
+const
+  SYSTEM_PROMPT =
+    'You are a Delphi/Pascal code completion engine. ' +
+    'The source code ends with the marker <|cursor|>. ' +
+    'Output ONLY the characters that should appear at <|cursor|>. ' +
+    'NEVER repeat or echo back any text that appears before <|cursor|>. ' +
+    'NEVER add explanations, comments about the code, markdown, or code fences. ' +
+    'Output raw Delphi/Pascal source only. ' +
+    'Stop when the current statement or block is logically complete.';
+var
+  Root, Options: TJSONObject;
+begin
+  Root := TJSONObject.Create;
+  try
+    Root.AddPair('model', GSettings.OllamaCompletionModel);
+    Root.AddPair('system', SYSTEM_PROMPT);
+    Root.AddPair('prompt', APrefix + '<|cursor|>');
+    Root.AddPair('stream', TJSONBool.Create(True));
+    Options := TJSONObject.Create;
+    Options.AddPair('temperature', TJSONNumber.Create(0.1));
+    Options.AddPair('num_predict', TJSONNumber.Create(256));
+    Root.AddPair('options', Options);
+    Result := Root.ToJSON;
+  finally
+    Root.Free;
+  end;
+end;
+
+// Parses an NDJSON stream from /api/generate (each line has a "response" field).
+function TAIClient.ReadOllamaGenerateStream(const AStreamData: string): string;
+var
+  Lines: TStringList;
+  Line: string;
+  Chunk: TJSONObject;
+  I: Integer;
+  SB: TStringBuilder;
+begin
+  SB := TStringBuilder.Create;
+  Lines := TStringList.Create;
+  try
+    Lines.Text := AStreamData;
+    for I := 0 to Lines.Count - 1 do
+    begin
+      Line := Trim(Lines[I]);
+      if Line = '' then Continue;
+      Chunk := TJSONObject.ParseJSONValue(Line) as TJSONObject;
+      if Chunk = nil then Continue;
+      try
+        if Chunk.GetValue('error') <> nil then
+          raise Exception.Create('Ollama error: ' +
+            Chunk.GetValue<string>('error', 'Unknown error'));
+        SB.Append(Chunk.GetValue<string>('response', ''));
+      finally
+        Chunk.Free;
+      end;
+    end;
+    Result := SB.ToString;
+  finally
+    Lines.Free;
+    SB.Free;
+  end;
+end;
+
+procedure TAIClient.SendOllamaGenerate(const APrefix, ASuffix: string; ACallback: TAIResultCallback);
+var
+  HTTP: THTTPClient;
+  RequestBody, ResponseStream: TStringStream;
+  Headers: TNetHeaders;
+  ResultText: string;
+  ErrorText: string;
+  BaseURL: string;
+  GenerateURL: string;
+begin
+  // Derive /api/generate URL from the configured chat endpoint
+  BaseURL := GSettings.OllamaEndpoint;
+  BaseURL := StringReplace(BaseURL, '/api/chat', '', [rfReplaceAll]);
+  BaseURL := StringReplace(BaseURL, '/api/generate', '', [rfReplaceAll]);
+  while (Length(BaseURL) > 0) and (BaseURL[Length(BaseURL)] = '/') do
+    SetLength(BaseURL, Length(BaseURL) - 1);
+  GenerateURL := BaseURL + '/api/generate';
+
+  HTTP := CreateHTTP(10000, 120000);
+  try
+    Headers := [TNameValuePair.Create('Content-Type', 'application/json')];
+    RequestBody := TStringStream.Create(BuildOllamaGenerateJSON(APrefix), TEncoding.UTF8);
+    ResponseStream := TStringStream.Create('', TEncoding.UTF8);
+    try
+      try
+        HTTP.Post(GenerateURL, RequestBody, ResponseStream, Headers);
+        ResultText := ReadOllamaGenerateStream(ResponseStream.DataString);
+
+      except
+        on E: Exception do
+          if not FCancelled then
+            ErrorText := 'Ollama completion error: ' + E.Message;
+      end;
+    finally
+      RequestBody.Free;
+      ResponseStream.Free;
+    end;
+  finally
+    DestroyHTTP(HTTP);
+  end;
+  if FCancelled then
+    Exit;
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      ACallback(ResultText, ErrorText);
+    end);
+end;
+
+procedure TAIClient.SendCompletionAsync(const APrefix, ASuffix: string; ACallback: TAIResultCallback);
+begin
+  TTask.Run(
+    procedure
+    begin
+      SendOllamaGenerate(APrefix, ASuffix, ACallback);
     end);
 end;
 

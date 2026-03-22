@@ -60,6 +60,8 @@ type
     FMaxTokens: Integer;
     FTemperature: Double;
     FLastPromptIndex: Integer;
+    FOllamaCompletionModel: string;
+    FCodeCompletionEnabled: Boolean;
     FPrompts: TList<TPromptTemplate>;
     procedure SeedDefaultPrompts;
     procedure LoadPrompts;
@@ -94,6 +96,8 @@ type
     property MaxTokens: Integer read FMaxTokens write FMaxTokens;
     property Temperature: Double read FTemperature write FTemperature;
     property LastPromptIndex: Integer read FLastPromptIndex write FLastPromptIndex;
+    property OllamaCompletionModel: string read FOllamaCompletionModel write FOllamaCompletionModel;
+    property CodeCompletionEnabled: Boolean read FCodeCompletionEnabled write FCodeCompletionEnabled;
 
     // Unified prompt list - all templates in display order
     property Prompts: TList<TPromptTemplate> read FPrompts;
@@ -178,6 +182,8 @@ begin
   FMaxTokens := 32768;
   FTemperature := 0.2;
   FLastPromptIndex := 0;
+  FOllamaCompletionModel := 'codellama';
+  FCodeCompletionEnabled := False;
   Load;
 end;
 
@@ -367,6 +373,10 @@ begin
           FTemperature := Reg.ReadFloat('Temperature');
         if Reg.ValueExists('LastPromptIndex') then
           FLastPromptIndex := Reg.ReadInteger('LastPromptIndex');
+        if Reg.ValueExists('OllamaCompletionModel') then
+          FOllamaCompletionModel := Reg.ReadString('OllamaCompletionModel');
+        if Reg.ValueExists('CodeCompletionEnabled') then
+          FCodeCompletionEnabled := Reg.ReadBool('CodeCompletionEnabled');
       finally
         Reg.CloseKey;
       end;
@@ -406,6 +416,8 @@ begin
         Reg.WriteInteger('MaxTokens', FMaxTokens);
         Reg.WriteFloat('Temperature', FTemperature);
         Reg.WriteInteger('LastPromptIndex', FLastPromptIndex);
+        Reg.WriteString('OllamaCompletionModel', FOllamaCompletionModel);
+        Reg.WriteBool('CodeCompletionEnabled', FCodeCompletionEnabled);
       finally
         Reg.CloseKey;
       end;
