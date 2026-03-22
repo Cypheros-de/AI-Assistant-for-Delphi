@@ -65,6 +65,7 @@ type
     function ExtractClaudeResponse(const AJSON: string): string;
     function ExtractOpenAIResponse(const AJSON: string): string;
     function ExtractOllamaResponse(const AJSON: string): string;
+    function ReadOllamaStream(const AStreamData: string): string;
 
     function StripCodeFences(const AText: string): string;
     function RoleToStr(ARole: TChatRole): string;
@@ -226,7 +227,7 @@ begin
   Root := TJSONObject.Create;
   try
     Root.AddPair('model', GSettings.OllamaModel);
-    Root.AddPair('stream', TJSONBool.Create(False));
+    Root.AddPair('stream', TJSONBool.Create(True));
     Options := TJSONObject.Create;
     Options.AddPair('temperature', TJSONNumber.Create(GSettings.Temperature));
     Options.AddPair('num_predict', TJSONNumber.Create(GSettings.MaxTokens));
@@ -329,7 +330,7 @@ begin
   Root := TJSONObject.Create;
   try
     Root.AddPair('model', GSettings.OllamaModel);
-    Root.AddPair('stream', TJSONBool.Create(False));
+    Root.AddPair('stream', TJSONBool.Create(True));
     Options := TJSONObject.Create;
     Options.AddPair('temperature', TJSONNumber.Create(GSettings.Temperature));
     Options.AddPair('num_predict', TJSONNumber.Create(GSettings.MaxTokens));
@@ -417,6 +418,46 @@ begin
     Result := Message.GetValue<string>('content', '');
   finally
     Root.Free;
+  end;
+end;
+
+// Parses a newline-delimited stream of Ollama JSON chunks (stream: true)
+// and concatenates all message.content fragments into a single string.
+// Each line is a JSON object; the final line has "done": true.
+function TAIClient.ReadOllamaStream(const AStreamData: string): string;
+var
+  Lines: TStringList;
+  Line: string;
+  Chunk: TJSONObject;
+  MsgObj: TJSONObject;
+  I: Integer;
+  SB: TStringBuilder;
+begin
+  SB := TStringBuilder.Create;
+  Lines := TStringList.Create;
+  try
+    Lines.Text := AStreamData;
+    for I := 0 to Lines.Count - 1 do
+    begin
+      Line := Trim(Lines[I]);
+      if Line = '' then Continue;
+      Chunk := TJSONObject.ParseJSONValue(Line) as TJSONObject;
+      if Chunk = nil then Continue;
+      try
+        if Chunk.GetValue('error') <> nil then
+          raise Exception.Create('Ollama error: ' +
+            Chunk.GetValue<string>('error', 'Unknown error'));
+        MsgObj := Chunk.GetValue('message') as TJSONObject;
+        if MsgObj <> nil then
+          SB.Append(MsgObj.GetValue<string>('content', ''));
+      finally
+        Chunk.Free;
+      end;
+    end;
+    Result := SB.ToString;
+  finally
+    Lines.Free;
+    SB.Free;
   end;
 end;
 
@@ -576,8 +617,7 @@ end;
 procedure TAIClient.SendOllama(const APrompt: string; ACallback: TAIResultCallback);
 var
   HTTP: THTTPClient;
-  RequestBody: TStringStream;
-  Response: IHTTPResponse;
+  RequestBody, ResponseStream: TStringStream;
   Headers: TNetHeaders;
   ResultText: string;
   ErrorText: string;
@@ -586,10 +626,11 @@ begin
   try
     Headers := [TNameValuePair.Create('Content-Type', 'application/json')];
     RequestBody := TStringStream.Create(BuildOllamaJSON(APrompt), TEncoding.UTF8);
+    ResponseStream := TStringStream.Create('', TEncoding.UTF8);
     try
       try
-        Response := HTTP.Post(GSettings.OllamaEndpoint, RequestBody, nil, Headers);
-        ResultText := StripCodeFences(ExtractOllamaResponse(Response.ContentAsString(TEncoding.UTF8)));
+        HTTP.Post(GSettings.OllamaEndpoint, RequestBody, ResponseStream, Headers);
+        ResultText := StripCodeFences(ReadOllamaStream(ResponseStream.DataString));
       except
         on E: Exception do
           if not FCancelled then
@@ -597,6 +638,7 @@ begin
       end;
     finally
       RequestBody.Free;
+      ResponseStream.Free;
     end;
   finally
     DestroyHTTP(HTTP);
@@ -773,8 +815,7 @@ end;
 procedure TAIClient.SendOllamaChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
 var
   HTTP: THTTPClient;
-  RequestBody: TStringStream;
-  Response: IHTTPResponse;
+  RequestBody, ResponseStream: TStringStream;
   Headers: TNetHeaders;
   ResultText: string;
   ErrorText: string;
@@ -783,10 +824,11 @@ begin
   try
     Headers := [TNameValuePair.Create('Content-Type', 'application/json')];
     RequestBody := TStringStream.Create(BuildChatOllamaJSON(AHistory), TEncoding.UTF8);
+    ResponseStream := TStringStream.Create('', TEncoding.UTF8);
     try
       try
-        Response := HTTP.Post(GSettings.OllamaEndpoint, RequestBody, nil, Headers);
-        ResultText := ExtractOllamaResponse(Response.ContentAsString(TEncoding.UTF8));
+        HTTP.Post(GSettings.OllamaEndpoint, RequestBody, ResponseStream, Headers);
+        ResultText := ReadOllamaStream(ResponseStream.DataString);
       except
         on E: Exception do
           if not FCancelled then
@@ -794,6 +836,7 @@ begin
       end;
     finally
       RequestBody.Free;
+      ResponseStream.Free;
     end;
   finally
     DestroyHTTP(HTTP);
