@@ -18,7 +18,7 @@ This plugin is a personal learning project. The goal was to explore different wa
 
 Several approaches are covered:
 
-- **Direct API calls** — sending code to Anthropic Claude, OpenAI, Groq, Mistral or a local Ollama instance and applying the result inside the IDE
+- **Direct API calls** — sending code to Anthropic Claude, OpenAI, Groq, Mistral, Gemini or a local Ollama instance and applying the result inside the IDE
 - **Agentic AI via Claude Code** — running Claude Code in an isolated VM, letting it operate freely on a copy of the source code, and syncing results back to the development machine over SFTP
 
 The SFTP sync feature was built specifically for the Claude Code use case. Rather than giving an agentic AI direct access to the development machine, the project files are mirrored to a VM over SFTP. Claude Code runs inside the VM, makes changes, and those changes are automatically detected and synced back. The development machine and the AI remain isolated from each other — the SFTP connection is the only bridge.
@@ -168,6 +168,7 @@ All AI provider configuration in one place:
 | **Ollama** | Any locally hosted model — fully offline, nothing leaves the machine, deepseek-coder:latest, llama3.2:latest, qwen3-coder:30b, gpt-oss:20b and others |
 | **Groq** | llama3.3-70b, gpt-oss 120B, and others |
 | **Mistral AI** | mistral-large, codestral, and others |
+| **Gemini** | gemini-2.5-flash, gemini-2.5-pro, and others |
 
 ---
 
