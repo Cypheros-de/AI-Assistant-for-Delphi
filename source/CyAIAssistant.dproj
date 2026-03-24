@@ -106,6 +106,7 @@
         <VerInfo_MinorVer>9</VerInfo_MinorVer>
         <PostBuildEvent><![CDATA[copy "$(PROJECTDIR)\..\bin\win32\libssh2.dll" "$(OUTPUTDIR)libssh2.dll"
 $(PostBuildEvent)]]></PostBuildEvent>
+        <DCC_DynamicBase>false</DCC_DynamicBase>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>

@@ -3,6 +3,10 @@
 ![Delphi](https://img.shields.io/badge/Delphi-10.4%2B-EE1F35?logo=delphi&logoColor=white)
 ![License](https://img.shields.io/badge/License-GPL--2.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows)
+![Ollama](https://img.shields.io/badge/ollama-%23000000.svg?style=for-the-badge&logo=ollama&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-D97757?style=for-the-badge&logo=claude&logoColor=white)
+![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)
+
 
 CyAIAssistant is an Open Tools API plugin for Delphi 10.4+ that brings AI-assisted coding directly into the IDE. Select code, describe what you need, and get a result — without leaving the editor.
 
