@@ -30,7 +30,7 @@ const
   REG_PROMPTS = 'Software\CyAIAssistant\Delphi\Prompts';
 
 type
-  TAIProvider = (apClaude, apOpenAI, apOllama, apGroq, apMistral);
+  TAIProvider = (apClaude, apOpenAI, apOllama, apGroq, apMistral, apGemini);
 
   TPromptTemplate = record
     Name: string;
@@ -57,6 +57,9 @@ type
     FMistralAPIKey: string;
     FMistralModel: string;
     FMistralEndpoint: string;
+    FGeminiAPIKey: string;
+    FGeminiModel: string;
+    FGeminiEndpoint: string;
     FMaxTokens: Integer;
     FTemperature: Double;
     FLastPromptIndex: Integer;
@@ -93,6 +96,9 @@ type
     property MistralAPIKey: string read FMistralAPIKey write FMistralAPIKey;
     property MistralModel: string read FMistralModel write FMistralModel;
     property MistralEndpoint: string read FMistralEndpoint write FMistralEndpoint;
+    property GeminiAPIKey: string read FGeminiAPIKey write FGeminiAPIKey;
+    property GeminiModel: string read FGeminiModel write FGeminiModel;
+    property GeminiEndpoint: string read FGeminiEndpoint write FGeminiEndpoint;
     property MaxTokens: Integer read FMaxTokens write FMaxTokens;
     property Temperature: Double read FTemperature write FTemperature;
     property LastPromptIndex: Integer read FLastPromptIndex write FLastPromptIndex;
@@ -179,6 +185,8 @@ begin
   FGroqModel := 'llama-3.3-70b-versatile';
   FMistralEndpoint := 'https://api.mistral.ai/v1/chat/completions';
   FMistralModel := 'mistral-large-latest';
+  FGeminiEndpoint := 'https://generativelanguage.googleapis.com/v1beta/models';
+  FGeminiModel := 'gemini-2.5-flash';
   FMaxTokens := 32768;
   FTemperature := 0.2;
   FLastPromptIndex := 0;
@@ -367,6 +375,12 @@ begin
           FMistralModel := Reg.ReadString('MistralModel');
         if Reg.ValueExists('MistralEndpoint') then
           FMistralEndpoint := Reg.ReadString('MistralEndpoint');
+        if Reg.ValueExists('GeminiAPIKey') then
+          FGeminiAPIKey := Reg.ReadString('GeminiAPIKey');
+        if Reg.ValueExists('GeminiModel') then
+          FGeminiModel := Reg.ReadString('GeminiModel');
+        if Reg.ValueExists('GeminiEndpoint') then
+          FGeminiEndpoint := Reg.ReadString('GeminiEndpoint');
         if Reg.ValueExists('MaxTokens') then
           FMaxTokens := Reg.ReadInteger('MaxTokens');
         if Reg.ValueExists('Temperature') then
@@ -413,6 +427,9 @@ begin
         Reg.WriteString('MistralAPIKey', FMistralAPIKey);
         Reg.WriteString('MistralModel', FMistralModel);
         Reg.WriteString('MistralEndpoint', FMistralEndpoint);
+        Reg.WriteString('GeminiAPIKey', FGeminiAPIKey);
+        Reg.WriteString('GeminiModel', FGeminiModel);
+        Reg.WriteString('GeminiEndpoint', FGeminiEndpoint);
         Reg.WriteInteger('MaxTokens', FMaxTokens);
         Reg.WriteFloat('Temperature', FTemperature);
         Reg.WriteInteger('LastPromptIndex', FLastPromptIndex);

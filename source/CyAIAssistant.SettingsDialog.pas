@@ -66,6 +66,15 @@ type
     EditMistralKey: TEdit;
     EditMistralModel: TComboBox;
     EditMistralEndpoint: TEdit;
+    TabGemini: TTabSheet;
+    LblGeminiKey: TLabel;
+    LblGeminiModel: TLabel;
+    LblGeminiEndpoint: TLabel;
+    LblGeminiInfo: TLabel;
+    Bevel7: TBevel;
+    EditGeminiKey: TEdit;
+    EditGeminiModel: TComboBox;
+    EditGeminiEndpoint: TEdit;
     TabGeneral: TTabSheet;
     LblDefaultProvider: TLabel;
     LblMaxTokens: TLabel;
@@ -154,6 +163,9 @@ begin
   EditMistralKey.Text := GSettings.MistralAPIKey;
   EditMistralModel.Text := GSettings.MistralModel;
   EditMistralEndpoint.Text := GSettings.MistralEndpoint;
+  EditGeminiKey.Text := GSettings.GeminiAPIKey;
+  EditGeminiModel.Text := GSettings.GeminiModel;
+  EditGeminiEndpoint.Text := GSettings.GeminiEndpoint;
   EditMaxTokens.Text := IntToStr(GSettings.MaxTokens);
   EditTemperature.Text := FormatFloat('0.00', GSettings.Temperature);
   ComboDefaultProvider.ItemIndex := Ord(GSettings.Provider);
@@ -181,6 +193,9 @@ begin
   GSettings.MistralAPIKey := Trim(EditMistralKey.Text);
   GSettings.MistralModel := Trim(EditMistralModel.Text);
   GSettings.MistralEndpoint := Trim(EditMistralEndpoint.Text);
+  GSettings.GeminiAPIKey := Trim(EditGeminiKey.Text);
+  GSettings.GeminiModel := Trim(EditGeminiModel.Text);
+  GSettings.GeminiEndpoint := Trim(EditGeminiEndpoint.Text);
   GSettings.Provider := TAIProvider(ComboDefaultProvider.ItemIndex);
   try
     GSettings.MaxTokens := StrToIntDef(EditMaxTokens.Text, 4096);

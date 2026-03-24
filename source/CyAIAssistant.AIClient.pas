@@ -58,6 +58,14 @@ type
     function BuildOllamaGenerateJSON(const APrefix: string): string;
     function ReadOllamaGenerateStream(const AStreamData: string): string;
 
+    // Gemini
+    procedure SendGemini(const APrompt: string; ACallback: TAIResultCallback);
+    procedure SendGeminiChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
+    function BuildGeminiJSON(const APrompt: string): string;
+    function BuildChatGeminiJSON(const AHistory: TArray<TChatMessage>): string;
+    function ExtractGeminiResponse(const AJSON: string): string;
+    function GeminiEndpointURL: string;
+
     // JSON builders
     function BuildClaudeJSON(const APrompt: string): string;
     function BuildOpenAIJSON(const APrompt: string): string;
@@ -858,6 +866,223 @@ begin
     end);
 end;
 
+// ---------------------------------------------------------------------------
+// Google Gemini  (generateContent REST API)
+// ---------------------------------------------------------------------------
+
+// Builds the full endpoint URL including model and API key.
+// Base endpoint: https://generativelanguage.googleapis.com/v1beta/models
+// Full URL:      {base}/{model}:generateContent?key={API_KEY}
+function TAIClient.GeminiEndpointURL: string;
+begin
+  Result := GSettings.GeminiEndpoint;
+  while (Length(Result) > 0) and (Result[Length(Result)] = '/') do
+    SetLength(Result, Length(Result) - 1);
+  Result := Result + '/' + GSettings.GeminiModel + ':generateContent?key=' + GSettings.GeminiAPIKey;
+end;
+
+function TAIClient.BuildGeminiJSON(const APrompt: string): string;
+const
+  SYSTEM_TEXT = 'You are an expert Delphi/Pascal developer. ' +
+    'Return ONLY the raw Delphi/Pascal source code — no markdown, no code fences, ' +
+    'no explanations before or after the code. ' +
+    'Use 2-space indentation. Follow Delphi naming conventions (T prefix for types, ' +
+    'F prefix for fields). Output plain text that can be pasted directly into the IDE.';
+var
+  Root, SysInstruct, SysPart, GenConfig: TJSONObject;
+  SysPartsArr, Contents, PartsArr: TJSONArray;
+  UserMsg, UserPart: TJSONObject;
+begin
+  Root := TJSONObject.Create;
+  try
+    SysInstruct := TJSONObject.Create;
+    SysPartsArr := TJSONArray.Create;
+    SysPart := TJSONObject.Create;
+    SysPart.AddPair('text', SYSTEM_TEXT);
+    SysPartsArr.Add(SysPart);
+    SysInstruct.AddPair('parts', SysPartsArr);
+    Root.AddPair('system_instruction', SysInstruct);
+
+    Contents := TJSONArray.Create;
+    UserMsg := TJSONObject.Create;
+    UserMsg.AddPair('role', 'user');
+    PartsArr := TJSONArray.Create;
+    UserPart := TJSONObject.Create;
+    UserPart.AddPair('text', APrompt);
+    PartsArr.Add(UserPart);
+    UserMsg.AddPair('parts', PartsArr);
+    Contents.Add(UserMsg);
+    Root.AddPair('contents', Contents);
+
+    GenConfig := TJSONObject.Create;
+    GenConfig.AddPair('maxOutputTokens', TJSONNumber.Create(GSettings.MaxTokens));
+    GenConfig.AddPair('temperature', TJSONNumber.Create(GSettings.Temperature));
+    Root.AddPair('generationConfig', GenConfig);
+
+    Result := Root.ToJSON;
+  finally
+    Root.Free;
+  end;
+end;
+
+function TAIClient.BuildChatGeminiJSON(const AHistory: TArray<TChatMessage>): string;
+const
+  SYSTEM_TEXT = 'You are an expert Delphi/Pascal developer. ' +
+    'When generating files, wrap each file in a fenced code block whose ' +
+    'opening fence contains the suggested filename, for example:' + #10 +
+    '```pascal MyUnit.pas' + #10 + '...code...' + #10 + '```' + #10 +
+    'Supported extensions: .pas .dpr .dpk .dfm .dproj .groupproj .ini .txt. ' +
+    'Use 2-space indentation. Follow Delphi naming conventions.';
+var
+  Root, SysInstruct, SysPart, GenConfig: TJSONObject;
+  SysPartsArr, Contents, PartsArr: TJSONArray;
+  Msg, Part: TJSONObject;
+  I: Integer;
+begin
+  Root := TJSONObject.Create;
+  try
+    SysInstruct := TJSONObject.Create;
+    SysPartsArr := TJSONArray.Create;
+    SysPart := TJSONObject.Create;
+    SysPart.AddPair('text', SYSTEM_TEXT);
+    SysPartsArr.Add(SysPart);
+    SysInstruct.AddPair('parts', SysPartsArr);
+    Root.AddPair('system_instruction', SysInstruct);
+
+    Contents := TJSONArray.Create;
+    for I := 0 to High(AHistory) do
+    begin
+      Msg := TJSONObject.Create;
+      // Gemini uses 'user' / 'model' (not 'assistant')
+      if AHistory[I].Role = crUser then
+        Msg.AddPair('role', 'user')
+      else
+        Msg.AddPair('role', 'model');
+      PartsArr := TJSONArray.Create;
+      Part := TJSONObject.Create;
+      Part.AddPair('text', AHistory[I].Content);
+      PartsArr.Add(Part);
+      Msg.AddPair('parts', PartsArr);
+      Contents.Add(Msg);
+    end;
+    Root.AddPair('contents', Contents);
+
+    GenConfig := TJSONObject.Create;
+    GenConfig.AddPair('maxOutputTokens', TJSONNumber.Create(GSettings.MaxTokens));
+    GenConfig.AddPair('temperature', TJSONNumber.Create(GSettings.Temperature));
+    Root.AddPair('generationConfig', GenConfig);
+
+    Result := Root.ToJSON;
+  finally
+    Root.Free;
+  end;
+end;
+
+function TAIClient.ExtractGeminiResponse(const AJSON: string): string;
+var
+  Root, ErrObj, Candidate, Content, Part: TJSONObject;
+  Candidates, Parts: TJSONArray;
+begin
+  Result := '';
+  Root := TJSONObject.ParseJSONValue(AJSON) as TJSONObject;
+  if Root = nil then
+    Exit;
+  try
+    if Root.GetValue('error') <> nil then
+    begin
+      ErrObj := Root.GetValue('error') as TJSONObject;
+      if ErrObj <> nil then
+        raise Exception.Create('Gemini API Error: ' + ErrObj.GetValue<string>('message', 'Unknown error'));
+    end;
+    Candidates := Root.GetValue('candidates') as TJSONArray;
+    if (Candidates = nil) or (Candidates.Count = 0) then
+      Exit;
+    Candidate := Candidates.Items[0] as TJSONObject;
+    if Candidate = nil then Exit;
+    Content := Candidate.GetValue('content') as TJSONObject;
+    if Content = nil then Exit;
+    Parts := Content.GetValue('parts') as TJSONArray;
+    if (Parts = nil) or (Parts.Count = 0) then Exit;
+    Part := Parts.Items[0] as TJSONObject;
+    if Part <> nil then
+      Result := Part.GetValue<string>('text', '');
+  finally
+    Root.Free;
+  end;
+end;
+
+procedure TAIClient.SendGemini(const APrompt: string; ACallback: TAIResultCallback);
+var
+  HTTP: THTTPClient;
+  RequestBody: TStringStream;
+  Response: IHTTPResponse;
+  Headers: TNetHeaders;
+  ResultText: string;
+  ErrorText: string;
+begin
+  HTTP := CreateHTTP(30000, 120000);
+  try
+    Headers := [TNameValuePair.Create('Content-Type', 'application/json')];
+    RequestBody := TStringStream.Create(BuildGeminiJSON(APrompt), TEncoding.UTF8);
+    try
+      try
+        Response := HTTP.Post(GeminiEndpointURL, RequestBody, nil, Headers);
+        ResultText := StripCodeFences(ExtractGeminiResponse(Response.ContentAsString(TEncoding.UTF8)));
+      except
+        on E: Exception do
+          if not FCancelled then
+            ErrorText := E.Message;
+      end;
+    finally
+      RequestBody.Free;
+    end;
+  finally
+    DestroyHTTP(HTTP);
+  end;
+  if FCancelled then Exit;
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      ACallback(ResultText, ErrorText);
+    end);
+end;
+
+procedure TAIClient.SendGeminiChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
+var
+  HTTP: THTTPClient;
+  RequestBody: TStringStream;
+  Response: IHTTPResponse;
+  Headers: TNetHeaders;
+  ResultText: string;
+  ErrorText: string;
+begin
+  HTTP := CreateHTTP(30000, 180000);
+  try
+    Headers := [TNameValuePair.Create('Content-Type', 'application/json')];
+    RequestBody := TStringStream.Create(BuildChatGeminiJSON(AHistory), TEncoding.UTF8);
+    try
+      try
+        Response := HTTP.Post(GeminiEndpointURL, RequestBody, nil, Headers);
+        ResultText := ExtractGeminiResponse(Response.ContentAsString(TEncoding.UTF8));
+      except
+        on E: Exception do
+          if not FCancelled then
+            ErrorText := E.Message;
+      end;
+    finally
+      RequestBody.Free;
+    end;
+  finally
+    DestroyHTTP(HTTP);
+  end;
+  if FCancelled then Exit;
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      ACallback(ResultText, ErrorText);
+    end);
+end;
+
 procedure TAIClient.SendAsync(const APrompt: string; ACallback: TAIResultCallback);
 begin
   TTask.Run(
@@ -874,6 +1099,8 @@ begin
           SendOpenAICompatible(APrompt, GSettings.GroqEndpoint, GSettings.GroqAPIKey, GSettings.GroqModel, ACallback);
         apMistral:
           SendOpenAICompatible(APrompt, GSettings.MistralEndpoint, GSettings.MistralAPIKey, GSettings.MistralModel, ACallback);
+        apGemini:
+          SendGemini(APrompt, ACallback);
       end;
     end);
 end;
@@ -1048,6 +1275,8 @@ begin
           SendOpenAICompatibleChat(AHistory, GSettings.GroqEndpoint, GSettings.GroqAPIKey, GSettings.GroqModel, ACallback);
         apMistral:
           SendOpenAICompatibleChat(AHistory, GSettings.MistralEndpoint, GSettings.MistralAPIKey, GSettings.MistralModel, ACallback);
+        apGemini:
+          SendGeminiChat(AHistory, ACallback);
       end;
     end);
 end;

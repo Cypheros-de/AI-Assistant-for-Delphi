@@ -662,6 +662,109 @@ object SettingsDialog: TSettingsDialog
         TabOrder = 2
       end
     end
+    object TabGemini: TTabSheet
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      Caption = '  Gemini  '
+      object LblGeminiKey: TLabel
+        Left = 16
+        Top = 20
+        Width = 43
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'API Key:'
+      end
+      object LblGeminiModel: TLabel
+        Left = 16
+        Top = 57
+        Width = 37
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Model:'
+      end
+      object LblGeminiEndpoint: TLabel
+        Left = 16
+        Top = 93
+        Width = 72
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'API Endpoint:'
+      end
+      object LblGeminiInfo: TLabel
+        Left = 16
+        Top = 132
+        Width = 320
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Get your API key at: https://aistudio.google.com/app/apikey'
+      end
+      object Bevel7: TBevel
+        Left = 10
+        Top = 120
+        Width = 650
+        Height = 2
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Shape = bsTopLine
+      end
+      object EditGeminiKey: TEdit
+        Left = 200
+        Top = 17
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        PasswordChar = '*'
+        TabOrder = 0
+      end
+      object EditGeminiModel: TComboBox
+        Left = 200
+        Top = 54
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 1
+        Items.Strings = (
+          'gemini-2.5-flash'
+          'gemini-2.5-pro'
+          'gemini-2.0-flash'
+          'gemini-1.5-pro'
+          'gemini-1.5-flash'
+          'gemini-1.5-flash-8b')
+      end
+      object EditGeminiEndpoint: TEdit
+        Left = 200
+        Top = 90
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 2
+      end
+    end
     object TabGeneral: TTabSheet
       Margins.Left = 5
       Margins.Top = 5
@@ -730,7 +833,8 @@ object SettingsDialog: TSettingsDialog
           'GPT (OpenAI)'
           'Ollama (Local)'
           'Groq'
-          'Mistral')
+          'Mistral'
+          'Google Gemini')
       end
       object EditMaxTokens: TEdit
         Left = 200
