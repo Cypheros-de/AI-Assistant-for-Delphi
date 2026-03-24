@@ -300,39 +300,40 @@ object SettingsDialog: TSettingsDialog
       object LblOllamaModel: TLabel
         Left = 16
         Top = 57
-        Width = 37
+        Width = 81
         Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption = 'Model:'
+        Caption = 'Primary Model:'
       end
       object LblOllamaCompletionModel: TLabel
         Left = 16
         Top = 132
-        Width = 103
+        Width = 134
         Height = 15
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption = 'Completion Model:'
+        Caption = 'Code Completion Model:'
       end
       object LblOllamaInfo: TLabel
         Left = 16
-        Top = 196
+        Top = 204
         Width = 530
-        Height = 45
+        Height = 60
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
         Caption = 
           'Install Ollama from https://ollama.ai  |  Pull a model: ollama p' +
-          'ull qwen2.5-coder:7b'#13#10'Recommended for Chat: qwen2.5-coder:7b, co' +
-          'dellama:13b, deepseek-coder:6.7b'#13#10'Recommended for Completion: qw' +
-          'en2.5-coder:1.5b, qwen2.5-coder:7b, starcoder2:3b, codellama:7b'
+          'ull qwen2.5-coder:7b'#13#10#13#10'Recommended for Chat: qwen2.5-coder:7b, ' +
+          'codellama:13b, deepseek-coder:6.7b'#13#10'Recommended for Completion: ' +
+          'qwen2.5-coder:1.5b, qwen2.5-coder:7b, starcoder2:3b, codellama:7' +
+          'b'
       end
       object LblOllamaModelRating: TPanel
         Left = 448
@@ -415,7 +416,7 @@ object SettingsDialog: TSettingsDialog
         Margins.Top = 5
         Margins.Right = 5
         Margins.Bottom = 5
-        Caption = 'Load Models'
+        Caption = 'Reload Model List'
         TabOrder = 3
         OnClick = BtnLoadModelsClick
       end
