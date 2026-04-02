@@ -169,6 +169,7 @@ All AI provider configuration in one place:
 | **Groq** | llama3.3-70b, gpt-oss 120B, and others |
 | **Mistral AI** | mistral-large, codestral, and others |
 | **Gemini** | gemini-2.5-flash, gemini-2.5-pro, and others |
+| **z.ai GLM** | glm-5.1, glm-4.7, and others |
 
 ---
 
