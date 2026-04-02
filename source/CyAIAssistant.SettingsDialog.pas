@@ -101,6 +101,15 @@ type
     BtnUpdatePrompt: TButton;
     BtnClearFields: TButton;
     MemoPromptTemplate: TMemo;
+    TabZai: TTabSheet;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Bevel1: TBevel;
+    EditZaiKey: TEdit;
+    EditZaiModel: TComboBox;
+    EditZaiEndpoint: TEdit;
     procedure BtnOKClick(Sender: TObject);
     procedure BtnAddPromptClick(Sender: TObject);
     procedure BtnUpdatePromptClick(Sender: TObject);
@@ -148,6 +157,9 @@ begin
   EditClaudeKey.Text := GSettings.ClaudeAPIKey;
   EditClaudeModel.Text := GSettings.ClaudeModel;
   EditClaudeEndpoint.Text := GSettings.ClaudeEndpoint;
+  EditZaiKey.Text := GSettings.ZaiAPIKey;
+  EditZaiModel.Text := GSettings.ZaiModel;
+  EditZaiEndpoint.Text := GSettings.ZaiEndpoint;
   EditOpenAIKey.Text := GSettings.OpenAIAPIKey;
   EditOpenAIModel.Text := GSettings.OpenAIModel;
   EditOpenAIEndpoint.Text := GSettings.OpenAIEndpoint;
@@ -180,6 +192,9 @@ begin
   GSettings.ClaudeAPIKey := Trim(EditClaudeKey.Text);
   GSettings.ClaudeModel := Trim(EditClaudeModel.Text);
   GSettings.ClaudeEndpoint := Trim(EditClaudeEndpoint.Text);
+  GSettings.ZaiAPIKey := Trim(EditZaiKey.Text);
+  GSettings.ZaiModel := Trim(EditZaiModel.Text);
+  GSettings.ZaiEndpoint := Trim(EditZaiEndpoint.Text);
   GSettings.OpenAIAPIKey := Trim(EditOpenAIKey.Text);
   GSettings.OpenAIModel := Trim(EditOpenAIModel.Text);
   GSettings.OpenAIEndpoint := Trim(EditOpenAIEndpoint.Text);

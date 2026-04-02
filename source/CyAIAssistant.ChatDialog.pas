@@ -168,6 +168,10 @@ begin
       EditModel.Text := GSettings.GroqModel;
     apMistral:
       EditModel.Text := GSettings.MistralModel;
+    apGemini:
+      EditModel.Text := GSettings.GeminiModel;
+    apZai:
+      EditModel.Text := GSettings.ZaiModel;
   end;
 end;
 

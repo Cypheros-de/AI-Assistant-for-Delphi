@@ -139,6 +139,10 @@ begin
       EditModel.Text := GSettings.GroqModel;
     apMistral:
       EditModel.Text := GSettings.MistralModel;
+    apGemini:
+      EditModel.Text := GSettings.GeminiModel;
+    apZai:
+      EditModel.Text := GSettings.ZaiModel;
   end;
 end;
 
@@ -209,6 +213,10 @@ begin
       GSettings.GroqModel := Trim(EditModel.Text);
     apMistral:
       GSettings.MistralModel := Trim(EditModel.Text);
+    apGemini:
+      GSettings.GeminiModel := Trim(EditModel.Text);
+    apZai:
+      GSettings.ZaiModel := Trim(EditModel.Text);
   end;
 
   Prompt := BuildPrompt;

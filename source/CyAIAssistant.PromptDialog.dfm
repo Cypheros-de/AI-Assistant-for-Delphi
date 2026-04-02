@@ -129,7 +129,9 @@ object PromptDialog: TPromptDialog
         'GPT (OpenAI)'
         'Ollama (Local)'
         'Groq'
-        'Mistral')
+        'Mistral'
+        'Gemini (Google)'
+        'GLM (Z.ai)')
     end
     object EditModel: TEdit
       Left = 260

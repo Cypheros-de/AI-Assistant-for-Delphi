@@ -67,7 +67,7 @@ object SettingsDialog: TSettingsDialog
     Margins.Top = 5
     Margins.Right = 5
     Margins.Bottom = 5
-    ActivePage = TabClaude
+    ActivePage = TabGeneral
     Align = alClient
     MultiLine = True
     TabOrder = 1
@@ -704,7 +704,7 @@ object SettingsDialog: TSettingsDialog
       object LblGeminiInfo: TLabel
         Left = 16
         Top = 132
-        Width = 320
+        Width = 319
         Height = 15
         Margins.Left = 5
         Margins.Top = 5
@@ -756,6 +756,116 @@ object SettingsDialog: TSettingsDialog
       object EditGeminiEndpoint: TEdit
         Left = 200
         Top = 90
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 2
+      end
+    end
+    object TabZai: TTabSheet
+      Caption = 'GLM (Z.ai)'
+      ImageIndex = 8
+      object Label1: TLabel
+        Left = 18
+        Top = 22
+        Width = 43
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'API Key:'
+      end
+      object Label2: TLabel
+        Left = 18
+        Top = 59
+        Width = 37
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Model:'
+      end
+      object Label3: TLabel
+        Left = 18
+        Top = 95
+        Width = 72
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'API Endpoint:'
+      end
+      object Label4: TLabel
+        Left = 18
+        Top = 134
+        Width = 450
+        Height = 30
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 
+          'Get your API key at: https://z.ai/manage-apikey/apikey-list'#13#10'The' +
+          ' key is stored in the Windows registry under HKCU\Software\CyAIA' +
+          'ssistant\Delphi'
+      end
+      object Bevel1: TBevel
+        Left = 12
+        Top = 122
+        Width = 650
+        Height = 2
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Shape = bsTopLine
+      end
+      object EditZaiKey: TEdit
+        Left = 202
+        Top = 19
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        PasswordChar = '*'
+        TabOrder = 0
+      end
+      object EditZaiModel: TComboBox
+        Left = 202
+        Top = 56
+        Width = 440
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 1
+        Items.Strings = (
+          'glm-5.1'
+          'glm-5'
+          'glm-5-turbo'
+          'glm-4.7'
+          'glm-4.7-flash'
+          'glm-4.7-flashx'
+          'glm-4.6'
+          'glm-4.5'
+          'glm-4.5-air'
+          'glm-4.5-x'
+          'glm-4.5-airx'
+          'glm-4.5-flash'
+          'glm-4-32b-0414-128k')
+      end
+      object EditZaiEndpoint: TEdit
+        Left = 202
+        Top = 92
         Width = 440
         Height = 23
         Margins.Left = 5
@@ -834,7 +944,8 @@ object SettingsDialog: TSettingsDialog
           'Ollama (Local)'
           'Groq'
           'Mistral'
-          'Google Gemini')
+          'Google Gemini'
+          'GLM (Z.ai)')
       end
       object EditMaxTokens: TEdit
         Left = 200
@@ -869,7 +980,7 @@ object SettingsDialog: TSettingsDialog
         Left = 0
         Top = 0
         Width = 220
-        Height = 281
+        Height = 261
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -877,6 +988,7 @@ object SettingsDialog: TSettingsDialog
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
+        ExplicitHeight = 281
         object LblPromptTemplates: TLabel
           Left = 0
           Top = 0
@@ -901,7 +1013,7 @@ object SettingsDialog: TSettingsDialog
           Left = 0
           Top = 15
           Width = 220
-          Height = 230
+          Height = 210
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -910,10 +1022,11 @@ object SettingsDialog: TSettingsDialog
           ItemHeight = 15
           TabOrder = 0
           OnClick = ListCustomPromptsClick
+          ExplicitHeight = 230
         end
         object PanelListBtns: TPanel
           Left = 0
-          Top = 245
+          Top = 225
           Width = 220
           Height = 36
           Margins.Left = 5
@@ -923,6 +1036,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
+          ExplicitTop = 245
           object BtnMoveUp: TButton
             Left = 2
             Top = 4
@@ -968,7 +1082,7 @@ object SettingsDialog: TSettingsDialog
         Left = 220
         Top = 0
         Width = 472
-        Height = 281
+        Height = 261
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -976,6 +1090,7 @@ object SettingsDialog: TSettingsDialog
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitHeight = 281
         object PanelPromptTop: TPanel
           Left = 0
           Top = 0
@@ -1030,7 +1145,7 @@ object SettingsDialog: TSettingsDialog
         end
         object PanelPromptBtns: TPanel
           Left = 0
-          Top = 241
+          Top = 221
           Width = 472
           Height = 40
           Margins.Left = 5
@@ -1040,6 +1155,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
+          ExplicitTop = 241
           object BtnAddPrompt: TButton
             Left = 4
             Top = 5
@@ -1084,7 +1200,7 @@ object SettingsDialog: TSettingsDialog
           Left = 0
           Top = 62
           Width = 472
-          Height = 179
+          Height = 159
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -1098,6 +1214,7 @@ object SettingsDialog: TSettingsDialog
           ParentFont = False
           ScrollBars = ssVertical
           TabOrder = 2
+          ExplicitHeight = 179
         end
       end
     end

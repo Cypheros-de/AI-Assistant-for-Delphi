@@ -43,12 +43,14 @@ type
 
     // Single-turn senders
     procedure SendClaude(const APrompt: string; ACallback: TAIResultCallback);
+    procedure SendZai(const APrompt: string; ACallback: TAIResultCallback);
     procedure SendOpenAI(const APrompt: string; ACallback: TAIResultCallback);
     procedure SendOllama(const APrompt: string; ACallback: TAIResultCallback);
     procedure SendOpenAICompatible(const APrompt, AEndpoint, AAPIKey, AModel: string; ACallback: TAIResultCallback);
 
     // Multi-turn chat senders
     procedure SendClaudeChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
+    procedure SendZaiChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
     procedure SendOpenAIChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
     procedure SendOllamaChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
     procedure SendOpenAICompatibleChat(const AHistory: TArray<TChatMessage>; const AEndpoint, AAPIKey, AModel: string; ACallback: TAIResultCallback);
@@ -68,14 +70,17 @@ type
 
     // JSON builders
     function BuildClaudeJSON(const APrompt: string): string;
+    function BuildZaiJSON(const APrompt: string): string;
     function BuildOpenAIJSON(const APrompt: string): string;
     function BuildOllamaJSON(const APrompt: string): string;
     function BuildChatClaudeJSON(const AHistory: TArray<TChatMessage>): string;
+    function BuildChatZaiJSON(const AHistory: TArray<TChatMessage>): string;
     function BuildChatOpenAIJSON(const AHistory: TArray<TChatMessage>; const AModel: string): string;
     function BuildChatOllamaJSON(const AHistory: TArray<TChatMessage>): string;
 
     // Response extractors
     function ExtractClaudeResponse(const AJSON: string): string;
+    function ExtractZaiResponse(const AJSON: string): string;
     function ExtractOpenAIResponse(const AJSON: string): string;
     function ExtractOllamaResponse(const AJSON: string): string;
     function ReadOllamaStream(const AStreamData: string): string;
@@ -207,6 +212,33 @@ begin
   end;
 end;
 
+function TAIClient.BuildZaiJSON(const APrompt: string): string;
+const
+  SYSTEM_PROMPT = 'You are an expert Delphi/Pascal developer. ' + 'Return ONLY the raw Delphi/Pascal source code — no markdown, no code fences, ' +
+    'no ``` markers, no explanations before or after the code. ' + 'Use 2-space indentation. Follow Delphi naming conventions (T prefix for types, ' +
+    'F prefix for fields). Output plain text that can be pasted directly into the IDE.';
+var
+  Root: TJSONObject;
+  Messages: TJSONArray;
+  Msg: TJSONObject;
+begin
+  Root := TJSONObject.Create;
+  try
+    Root.AddPair('model', GSettings.ClaudeModel);
+    Root.AddPair('max_tokens', TJSONNumber.Create(GSettings.MaxTokens));
+    Root.AddPair('system', SYSTEM_PROMPT);
+    Messages := TJSONArray.Create;
+    Msg := TJSONObject.Create;
+    Msg.AddPair('role', 'user');
+    Msg.AddPair('content', APrompt);
+    Messages.Add(Msg);
+    Root.AddPair('messages', Messages);
+    Result := Root.ToJSON;
+  finally
+    Root.Free;
+  end;
+end;
+
 function TAIClient.BuildOpenAIJSON(const APrompt: string): string;
 var
   Root, Msg, SystemMsg: TJSONObject;
@@ -265,6 +297,37 @@ begin
 end;
 
 function TAIClient.BuildChatClaudeJSON(const AHistory: TArray<TChatMessage>): string;
+const
+  SYSTEM_PROMPT = 'You are an expert Delphi/Pascal developer. ' + 'When generating files, wrap each file in a fenced code block whose ' +
+    'opening fence contains the suggested filename, for example:' + #13#10 + '```pascal MyUnit.pas' + #13#10 + '...code...' + #13#10 + '```' + #13#10 +
+    'Supported extensions: .pas .dpr .dpk .dfm .dproj .groupproj .ini .txt. ' + 'Use 2-space indentation. Follow Delphi naming conventions.';
+var
+  Root: TJSONObject;
+  Messages: TJSONArray;
+  Msg: TJSONObject;
+  I: Integer;
+begin
+  Root := TJSONObject.Create;
+  try
+    Root.AddPair('model', GSettings.ClaudeModel);
+    Root.AddPair('max_tokens', TJSONNumber.Create(GSettings.MaxTokens));
+    Root.AddPair('system', SYSTEM_PROMPT);
+    Messages := TJSONArray.Create;
+    for I := 0 to High(AHistory) do
+    begin
+      Msg := TJSONObject.Create;
+      Msg.AddPair('role', RoleToStr(AHistory[I].Role));
+      Msg.AddPair('content', AHistory[I].Content);
+      Messages.Add(Msg);
+    end;
+    Root.AddPair('messages', Messages);
+    Result := Root.ToJSON;
+  finally
+    Root.Free;
+  end;
+end;
+
+function TAIClient.BuildChatZaiJSON(const AHistory: TArray<TChatMessage>): string;
 const
   SYSTEM_PROMPT = 'You are an expert Delphi/Pascal developer. ' + 'When generating files, wrap each file in a fenced code block whose ' +
     'opening fence contains the suggested filename, for example:' + #13#10 + '```pascal MyUnit.pas' + #13#10 + '...code...' + #13#10 + '```' + #13#10 +
@@ -398,6 +461,50 @@ begin
     ContentItem := Content.Items[0] as TJSONObject;
     if ContentItem <> nil then
       Result := ContentItem.GetValue<string>('text', '');
+  finally
+    Root.Free;
+  end;
+end;
+
+function TAIClient.ExtractZaiResponse(const AJSON: string): string;
+var
+  Root: TJSONObject;
+  Content: TJSONArray;
+  ChoiceObj, MessageObj: TJSONObject;
+  ErrObj: TJSONObject;
+  ChoicesArr: TJSONArray;
+  function FixJSONString(const AJSON: string): string;
+  begin
+    // Replace literal NewLines with escaped \n
+    Result := StringReplace(AJSON, #13#10, '\n', [rfReplaceAll]);
+    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+    Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+    // Replace literal Tabs with escaped \t
+    Result := StringReplace(Result, #9, '\t', [rfReplaceAll]);
+  end;
+begin
+  Result := '';
+  Root := TJSONObject.ParseJSONValue(FixJSONString(AJSON)) as TJSONObject;
+  if Root = nil then
+    Exit;
+  try
+    if Root.GetValue('error') <> nil then
+    begin
+      ErrObj := Root.GetValue('error') as TJSONObject;
+      if ErrObj <> nil then
+        raise Exception.Create('Z.ai API Error: ' + ErrObj.GetValue<string>('message', 'Unknown error'));
+    end;
+    ChoicesArr := Root.GetValue('choices') as TJSONArray;
+    if (ChoicesArr <> nil) and (ChoicesArr.Count > 0) then
+    begin
+      ChoiceObj := ChoicesArr.Items[0] as TJSONObject;
+      if ChoiceObj <> nil then
+      begin
+        MessageObj := ChoiceObj.GetValue('message') as TJSONObject;
+        if MessageObj <> nil then
+          Result := MessageObj.GetValue('content').Value;
+      end;
+    end;
   finally
     Root.Free;
   end;
@@ -573,6 +680,44 @@ begin
       try
         Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
         ResultText := StripCodeFences(ExtractClaudeResponse(Response.ContentAsString(TEncoding.UTF8)));
+      except
+        on E: Exception do
+          if not FCancelled then
+            ErrorText := E.Message;
+      end;
+    finally
+      RequestBody.Free;
+    end;
+  finally
+    DestroyHTTP(HTTP);
+  end;
+  if FCancelled then
+    Exit;
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      ACallback(ResultText, ErrorText);
+    end);
+end;
+
+procedure TAIClient.SendZai(const APrompt: string; ACallback: TAIResultCallback);
+var
+  HTTP: THTTPClient;
+  RequestBody: TStringStream;
+  Response: IHTTPResponse;
+  Headers: TNetHeaders;
+  ResultText: string;
+  ErrorText: string;
+begin
+  HTTP := CreateHTTP(30000, 120000);
+  try
+    Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
+
+    RequestBody := TStringStream.Create(BuildZaiJSON(APrompt), TEncoding.UTF8);
+    try
+      try
+        Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
+        ResultText := ExtractZaiResponse(Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
@@ -1091,6 +1236,8 @@ begin
       case GSettings.Provider of
         apClaude:
           SendClaude(APrompt, ACallback);
+        apZai:
+          SendZai(APrompt, ACallback);
         apOpenAI:
           SendOpenAI(APrompt, ACallback);
         apOllama:
@@ -1122,11 +1269,50 @@ begin
   try
     Headers := [TNameValuePair.Create('Content-Type', 'application/json'), TNameValuePair.Create('x-api-key', GSettings.ClaudeAPIKey),
       TNameValuePair.Create('anthropic-version', '2023-06-01')];
+
     RequestBody := TStringStream.Create(BuildChatClaudeJSON(AHistory), TEncoding.UTF8);
     try
       try
         Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
         ResultText := ExtractClaudeResponse(Response.ContentAsString(TEncoding.UTF8));
+      except
+        on E: Exception do
+          if not FCancelled then
+            ErrorText := E.Message + #13#10 + Response.ContentAsString(TEncoding.UTF8);
+      end;
+    finally
+      RequestBody.Free;
+    end;
+  finally
+    DestroyHTTP(HTTP);
+  end;
+  if FCancelled then
+    Exit;
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      ACallback(ResultText, ErrorText);
+    end);
+end;
+
+procedure TAIClient.SendZaiChat(const AHistory: TArray<TChatMessage>; ACallback: TAIResultCallback);
+var
+  HTTP: THTTPClient;
+  RequestBody: TStringStream;
+  Response: IHTTPResponse;
+  Headers: TNetHeaders;
+  ResultText: string;
+  ErrorText: string;
+begin
+  HTTP := CreateHTTP(30000, 180000);
+  try
+    Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
+
+    RequestBody := TStringStream.Create(BuildChatZaiJSON(AHistory), TEncoding.UTF8);
+    try
+      try
+        Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
+        ResultText := ExtractZaiResponse(Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
@@ -1267,6 +1453,8 @@ begin
       case GSettings.Provider of
         apClaude:
           SendClaudeChat(AHistory, ACallback);
+        apZai:
+          SendZaiChat(AHistory, ACallback);
         apOpenAI:
           SendOpenAIChat(AHistory, ACallback);
         apOllama:

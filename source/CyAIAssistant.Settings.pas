@@ -30,7 +30,7 @@ const
   REG_PROMPTS = 'Software\CyAIAssistant\Delphi\Prompts';
 
 type
-  TAIProvider = (apClaude, apOpenAI, apOllama, apGroq, apMistral, apGemini);
+  TAIProvider = (apClaude, apOpenAI, apOllama, apGroq, apMistral, apGemini, apZai);
 
   TPromptTemplate = record
     Name: string;
@@ -66,6 +66,9 @@ type
     FOllamaCompletionModel: string;
     FCodeCompletionEnabled: Boolean;
     FPrompts: TList<TPromptTemplate>;
+    FZaiAPIKey: string;
+    FZaiModel: string;
+    FZaiEndpoint: string;
     procedure SeedDefaultPrompts;
     procedure LoadPrompts;
     procedure SavePrompts;
@@ -85,6 +88,9 @@ type
     property ClaudeAPIKey: string read FClaudeAPIKey write FClaudeAPIKey;
     property ClaudeModel: string read FClaudeModel write FClaudeModel;
     property ClaudeEndpoint: string read FClaudeEndpoint write FClaudeEndpoint;
+    property ZaiAPIKey: string read FZaiAPIKey write FZaiAPIKey;
+    property ZaiModel: string read FZaiModel write FZaiModel;
+    property ZaiEndpoint: string read FZaiEndpoint write FZaiEndpoint;
     property OpenAIAPIKey: string read FOpenAIAPIKey write FOpenAIAPIKey;
     property OpenAIModel: string read FOpenAIModel write FOpenAIModel;
     property OpenAIEndpoint: string read FOpenAIEndpoint write FOpenAIEndpoint;
@@ -177,6 +183,8 @@ begin
   FProvider := apClaude;
   FClaudeModel := 'claude-opus-4-5';
   FClaudeEndpoint := 'https://api.anthropic.com/v1/messages';
+  FZaiModel := 'glm-4.7';
+  FZaiEndpoint := 'https://api.z.ai/api/coding/paas/v4/chat/completions';
   FOpenAIModel := 'gpt-4o';
   FOpenAIEndpoint := 'https://api.openai.com/v1/chat/completions';
   FOllamaEndpoint := 'http://localhost:11434/api/chat';
@@ -353,6 +361,12 @@ begin
           FClaudeModel := Reg.ReadString('ClaudeModel');
         if Reg.ValueExists('ClaudeEndpoint') then
           FClaudeEndpoint := Reg.ReadString('ClaudeEndpoint');
+        if Reg.ValueExists('ZaiAPIKey') then
+          FZaiAPIKey := Reg.ReadString('ZaiAPIKey');
+        if Reg.ValueExists('ZaiModel') then
+          FZaiModel := Reg.ReadString('ZaiModel');
+        if Reg.ValueExists('ZaiEndpoint') then
+          FZaiEndpoint := Reg.ReadString('ZaiEndpoint');
         if Reg.ValueExists('OpenAIAPIKey') then
           FOpenAIAPIKey := Reg.ReadString('OpenAIAPIKey');
         if Reg.ValueExists('OpenAIModel') then
@@ -416,6 +430,9 @@ begin
         Reg.WriteString('ClaudeAPIKey', FClaudeAPIKey);
         Reg.WriteString('ClaudeModel', FClaudeModel);
         Reg.WriteString('ClaudeEndpoint', FClaudeEndpoint);
+        Reg.WriteString('ZaiAPIKey', FZaiAPIKey);
+        Reg.WriteString('ZaiModel', FZaiModel);
+        Reg.WriteString('ZaiEndpoint', FZaiEndpoint);
         Reg.WriteString('OpenAIAPIKey', FOpenAIAPIKey);
         Reg.WriteString('OpenAIModel', FOpenAIModel);
         Reg.WriteString('OpenAIEndpoint', FOpenAIEndpoint);

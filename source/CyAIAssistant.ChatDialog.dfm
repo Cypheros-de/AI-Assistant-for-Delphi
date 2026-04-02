@@ -113,7 +113,9 @@ object ChatDialog: TChatDialog
         'OpenAI'
         'Ollama'
         'Groq'
-        'Mistral')
+        'Mistral'
+        'Gemini'
+        'GLM')
     end
     object EditModel: TEdit
       Left = 385
