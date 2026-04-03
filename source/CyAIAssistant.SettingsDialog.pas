@@ -8,7 +8,7 @@ interface
 uses
   System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.ComCtrls, Vcl.Graphics,
+  Vcl.ComCtrls, Vcl.Graphics, Vcl.FileCtrl,
   CyAIAssistant.Settings;
 
 type
@@ -83,6 +83,13 @@ type
     ComboDefaultProvider: TComboBox;
     EditMaxTokens: TEdit;
     EditTemperature: TEdit;
+    BevelDebug: TBevel;
+    LblDebug: TLabel;
+    ChkDebugEnabled: TCheckBox;
+    LblDebugLogFolder: TLabel;
+    EditDebugLogFolder: TEdit;
+    BtnBrowseLogFolder: TButton;
+    LblDebugInfo: TLabel;
     TabCustomPrompts: TTabSheet;
     PanelPromptsLeft: TPanel;
     LblPromptTemplates: TLabel;
@@ -122,6 +129,7 @@ type
     procedure BtnLoadModelsClick(Sender: TObject);
     procedure ComboOllamaModelChange(Sender: TObject);
     procedure ComboOllamaCompletionModelChange(Sender: TObject);
+    procedure BtnBrowseLogFolderClick(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
@@ -181,6 +189,8 @@ begin
   EditMaxTokens.Text := IntToStr(GSettings.MaxTokens);
   EditTemperature.Text := FormatFloat('0.00', GSettings.Temperature);
   ComboDefaultProvider.ItemIndex := Ord(GSettings.Provider);
+  ChkDebugEnabled.Checked := GSettings.DebugEnabled;
+  EditDebugLogFolder.Text := GSettings.DebugLogFolder;
   RefreshPromptList;
   // Auto-populate Ollama model list if the server is reachable; errors are
   // silently ignored so the dialog opens instantly when Ollama is not running.
@@ -217,6 +227,8 @@ begin
     GSettings.Temperature := StrToFloatDef(EditTemperature.Text, 0.2);
   except
   end;
+  GSettings.DebugEnabled := ChkDebugEnabled.Checked;
+  GSettings.DebugLogFolder := Trim(EditDebugLogFolder.Text);
   GSettings.Save;
 end;
 
@@ -638,6 +650,14 @@ begin
   finally
     HTTP.Free;
   end;
+end;
+
+procedure TSettingsDialog.BtnBrowseLogFolderClick(Sender: TObject);
+var
+  Folder: string;
+begin
+  if SelectDirectory('Select Log Folder', '', Folder, [sdNewUI, sdShowShares], Self) then
+    EditDebugLogFolder.Text := Folder;
 end;
 
 end.

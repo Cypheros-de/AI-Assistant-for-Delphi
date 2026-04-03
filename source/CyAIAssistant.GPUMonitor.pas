@@ -1,32 +1,25 @@
 unit CyAIAssistant.GPUMonitor;
-
 // (c) 2026 Cypheros
 // License: GPL 2.0
 //
 // GPUMonitor - GPU/VRAM utilization via D3DKMT
 // Delphi 10+ , Windows 10 1709+
-
 interface
-
 uses
   Windows, SysUtils, Classes, Math;
-
 type
   // -------------------------------------------------------------------------
   //  Exception class
   // -------------------------------------------------------------------------
   EGPUMonitorError = class(Exception);
-
   // -------------------------------------------------------------------------
   //  D3DKMT API types (internal)
   // -------------------------------------------------------------------------
   D3DKMT_HANDLE = UINT;
-
   _LUID = record
     LowPart: DWORD;
     HighPart: LONG;
   end;
-
   D3DKMT_ADAPTERINFO = record
     hAdapter: D3DKMT_HANDLE;
     AdapterLuid: _LUID;
@@ -34,34 +27,28 @@ type
     bPresentMoveRegionsPreferred: BOOL;
   end;
   PD3DKMT_ADAPTERINFO = ^D3DKMT_ADAPTERINFO;
-
   D3DKMT_ENUMADAPTERS2 = record
     NumAdapters: ULONG;
     pAdapters: PD3DKMT_ADAPTERINFO;
   end;
-
   D3DKMT_OPENADAPTERFROMLUID = record
     AdapterLuid: _LUID;
     hAdapter: D3DKMT_HANDLE;
   end;
-
   D3DKMT_CLOSEADAPTER = record
     hAdapter: D3DKMT_HANDLE;
   end;
-
   D3DKMT_QUERYADAPTERINFO = record
     hAdapter: D3DKMT_HANDLE;
     InfoType: UINT;
     pPrivateDriverData: Pointer;
     PrivateDriverDataSize: UINT;
   end;
-
   D3DKMT_SEGMENTSIZEINFO = record
     DedicatedVideoMemorySize: UInt64;
     DedicatedSystemMemorySize: UInt64;
     SharedSystemMemorySize: UInt64;
   end;
-
   D3DKMT_NODEMETADATA = record
     NodeOrdinalAndAdapterIndex: UINT;
     NodeData: record
@@ -72,7 +59,6 @@ type
       IoMmuSupported: BOOLEAN;
     end;
   end;
-
   D3DKMT_ADAPTER_PERFDATA = record
     PhysicalAdapterIndex: UINT;
     MemoryFrequency: UInt64;
@@ -85,13 +71,11 @@ type
     Temperature: ULONG;
     PowerStateOverride: Byte;
   end;
-
 const
   KMTQAITYPE_GETSEGMENTSIZE  = 3;
   KMTQAITYPE_ADAPTERTYPE     = 15;
   KMTQAITYPE_NODEMETADATA    = 25;
   KMTQAITYPE_ADAPTERPERFDATA = 62;
-
 type
   // -------------------------------------------------------------------------
   //  Public data types
@@ -103,7 +87,6 @@ type
     FriendlyName: string;
     UsagePercent: Double;
   end;
-
   TGPUInfo = record
     AdapterIndex: Integer;
     AdapterLuid: _LUID;
@@ -123,7 +106,6 @@ type
     PowerWatt: Integer;
     LastError: string;
   end;
-
   // -------------------------------------------------------------------------
   //  Initialization state
   // -------------------------------------------------------------------------
@@ -136,7 +118,6 @@ type
     msProbeSegmentFailed,  // Could not query segment information
     msProbeInputFailed     // Input offset could not be determined
   );
-
   // -------------------------------------------------------------------------
   //  TGPUMonitor
   // -------------------------------------------------------------------------
@@ -168,13 +149,11 @@ type
     FOfs_Result: Integer;
     FOfs_Input: Integer;
     FMissingFunctions: string;
-
     FD3DKMTEnumAdapters2: function(var A: D3DKMT_ENUMADAPTERS2): Integer; stdcall;
     FD3DKMTQueryAdapterInfo: function(var A: D3DKMT_QUERYADAPTERINFO): Integer; stdcall;
     FD3DKMTQueryStatistics: function(P: Pointer): Integer; stdcall;
     FD3DKMTOpenAdapterFromLuid: function(var A: D3DKMT_OPENADAPTERFROMLUID): Integer; stdcall;
     FD3DKMTCloseAdapter: function(var A: D3DKMT_CLOSEADAPTER): Integer; stdcall;
-
     function  LoadAPI: Boolean;
     function  FindInputOffset(const Luid: _LUID; NbSegments: ULONG): Integer;
     function  DoEnumerate: Boolean;
@@ -187,7 +166,6 @@ type
     function  GetItem(Idx: Integer): TGPUInfo;
     function  GetIsReady: Boolean;
     procedure SetError(AState: TGPUMonitorState; const AMsg: string);
-
     function  CheckWindowsVersion: Boolean;
     function  GetStateText: string;
   public
@@ -196,45 +174,31 @@ type
     ///   ARaiseOnError = False: no exception; check InitError / State instead.
     constructor Create(ARaiseOnError: Boolean = True);
     destructor Destroy; override;
-
     /// Re-detect adapters (e.g. after GPU hotplug)
     procedure Refresh;
-
     /// Update all GPU data (call periodically, e.g. every 1000 ms via timer)
     procedure Update;
-
     /// Query a single GPU (calls Update internally)
     function  QueryGPU(Index: Integer): TGPUInfo;
-
     /// True when ready and Update/QueryGPU will work
     property IsReady: Boolean read GetIsReady;
-
     /// Current state
     property State: TGPUMonitorState read FState;
-
     /// Human-readable status text (e.g. for display in the UI)
     property StateText: string read GetStateText;
-
     /// Detailed error text (empty when OK)
     property InitError: string read FInitError;
-
     /// Number of detected GPUs (0 when not initialized)
     property GPUCount: Integer read GetCount;
-
     /// Access to last measurement results
     property GPUs[Index: Integer]: TGPUInfo read GetItem; default;
   end;
-
   function EngineTypeName(ET: UINT): string;
-
 implementation
-
 const
   BUF_SIZE = 4096;
-
   // Minimum Windows version: Windows 10 1709 (Build 16299)
   MIN_BUILD = 16299;
-
 function EngineTypeName(ET: UINT): string;
 begin
   case ET of
@@ -245,12 +209,10 @@ begin
   else Result := Format('Engine %d', [ET]);
   end;
 end;
-
 function ToMB(B: UInt64): Int64; inline;
 begin
   Result := B div (1024 * 1024);
 end;
-
 // ---------------------------------------------------------------------------
 //  Windows version check
 // ---------------------------------------------------------------------------
@@ -263,25 +225,21 @@ begin
   {$WARN SYMBOL_DEPRECATED OFF}
   GetVersionEx(Ver);
   {$WARN SYMBOL_DEPRECATED ON}
-
   // Windows 10+ = MajorVersion >= 10
   // Build 16299+ = D3DKMTEnumAdapters2 available
   Result := (Ver.dwMajorVersion > 10) or
             ((Ver.dwMajorVersion = 10) and (Ver.dwBuildNumber >= MIN_BUILD));
 end;
-
 // ---------------------------------------------------------------------------
 procedure TGPUMonitor.SetError(AState: TGPUMonitorState; const AMsg: string);
 begin
   FState := AState;
   FInitError := AMsg;
 end;
-
 function TGPUMonitor.GetIsReady: Boolean;
 begin
   Result := FState = msOK;
 end;
-
 function TGPUMonitor.GetStateText: string;
 begin
   case FState of
@@ -296,12 +254,10 @@ begin
     Result := 'Unknown state';
   end;
 end;
-
 // ---------------------------------------------------------------------------
 //  Load API
 // ---------------------------------------------------------------------------
 function TGPUMonitor.LoadAPI: Boolean;
-
   function Load(const FuncName: string): Pointer;
   begin
     Result := GetProcAddress(FGdi32, PChar(FuncName));
@@ -312,11 +268,9 @@ function TGPUMonitor.LoadAPI: Boolean;
       FMissingFunctions := FMissingFunctions + FuncName;
     end;
   end;
-
 begin
   Result := False;
   FMissingFunctions := '';
-
   FGdi32 := LoadLibrary('gdi32.dll');
   if FGdi32 = 0 then
   begin
@@ -326,13 +280,11 @@ begin
       'Possible cause: corrupted Windows installation.');
     Exit;
   end;
-
   @FD3DKMTEnumAdapters2       := Load('D3DKMTEnumAdapters2');
   @FD3DKMTQueryAdapterInfo    := Load('D3DKMTQueryAdapterInfo');
   @FD3DKMTQueryStatistics     := Load('D3DKMTQueryStatistics');
   @FD3DKMTOpenAdapterFromLuid := Load('D3DKMTOpenAdapterFromLuid');
   @FD3DKMTCloseAdapter        := Load('D3DKMTCloseAdapter');
-
   if FMissingFunctions <> '' then
   begin
     SetError(msAPINotFound,
@@ -342,10 +294,8 @@ begin
              [FMissingFunctions, MIN_BUILD]));
     Exit;
   end;
-
   Result := True;
 end;
-
 // ---------------------------------------------------------------------------
 //  Offset-Probing
 // ---------------------------------------------------------------------------
@@ -356,13 +306,11 @@ var
 begin
   Result := -1;
   if NbSegments = 0 then Exit;
-
   {$IFDEF CPUX64}
   HeaderEnd := 24;
   {$ELSE}
   HeaderEnd := 16;
   {$ENDIF}
-
   Ofs := HeaderEnd;
   while Ofs < BUF_SIZE - 4 do
   begin
@@ -370,9 +318,7 @@ begin
     PUINT(@Buf[0])^ := 3;  // SEGMENT
     Move(Luid, Buf[4], 8);
     FillChar(Buf[12], HeaderEnd - 12, 0);
-
     PULONG(@Buf[Ofs])^ := 0;
-
     if FD3DKMTQueryStatistics(@Buf[0]) = 0 then
     begin
       FillChar(Buf, SizeOf(Buf), $FF);
@@ -380,18 +326,15 @@ begin
       Move(Luid, Buf[4], 8);
       FillChar(Buf[12], HeaderEnd - 12, 0);
       PULONG(@Buf[Ofs])^ := NbSegments + 1000;
-
       if FD3DKMTQueryStatistics(@Buf[0]) <> 0 then
       begin
         Result := Ofs;
         Exit;
       end;
     end;
-
     Inc(Ofs, 4);
   end;
 end;
-
 // ---------------------------------------------------------------------------
 procedure TGPUMonitor.QS_Prepare(P: PByte; Typ: UINT; const Luid: _LUID);
 begin
@@ -399,20 +342,17 @@ begin
   PUINT(@P[0])^ := Typ;
   Move(Luid, P[4], 8);
 end;
-
 function TGPUMonitor.AdOpen(const Luid: _LUID): D3DKMT_HANDLE;
 var A: D3DKMT_OPENADAPTERFROMLUID;
 begin
   FillChar(A, SizeOf(A), 0); A.AdapterLuid := Luid;
   if FD3DKMTOpenAdapterFromLuid(A) = 0 then Result := A.hAdapter else Result := 0;
 end;
-
 procedure TGPUMonitor.AdClose(h: D3DKMT_HANDLE);
 var A: D3DKMT_CLOSEADAPTER;
 begin
   if h <> 0 then begin A.hAdapter := h; FD3DKMTCloseAdapter(A); end;
 end;
-
 // ---------------------------------------------------------------------------
 //  Enumeration
 // ---------------------------------------------------------------------------
@@ -425,7 +365,6 @@ var
   NbSeg: ULONG;
 begin
   Result := False;
-
   FillChar(E, SizeOf(E), 0);
   FD3DKMTEnumAdapters2(E);
   if E.NumAdapters = 0 then
@@ -436,7 +375,6 @@ begin
       'GPU disabled, or remote desktop session without GPU access.');
     Exit;
   end;
-
   SetLength(Arr, E.NumAdapters);
   E.pAdapters := @Arr[0];
   if FD3DKMTEnumAdapters2(E) <> 0 then
@@ -445,14 +383,12 @@ begin
       'D3DKMTEnumAdapters2 failed on second call.');
     Exit;
   end;
-
   // Calculate ResultOffset
   {$IFDEF CPUX64}
   FOfs_Result := 24;
   {$ELSE}
   FOfs_Result := 16;
   {$ENDIF}
-
   // NbSegments for probing
   NbSeg := 0;
   FillChar(Buf, SizeOf(Buf), 0);
@@ -460,7 +396,6 @@ begin
   Move(Arr[0].AdapterLuid, Buf[4], 8);
   if FD3DKMTQueryStatistics(@Buf[0]) = 0 then
     NbSeg := PULONG(@Buf[FOfs_Result])^;
-
   if NbSeg = 0 then
   begin
     SetError(msProbeSegmentFailed,
@@ -469,7 +404,6 @@ begin
       'Please update your graphics driver.');
     Exit;
   end;
-
   // Find input offset
   FOfs_Input := FindInputOffset(Arr[0].AdapterLuid, NbSeg);
   if FOfs_Input < 0 then
@@ -481,7 +415,6 @@ begin
         [BUF_SIZE div 4, NbSeg, FOfs_Result]));
     Exit;
   end;
-
   SetLength(FAdapters, E.NumAdapters);
   for I := 0 to E.NumAdapters - 1 do
   begin
@@ -490,11 +423,9 @@ begin
     InitAdapter(FAdapters[I]);
   end;
   SetLength(FGPUs, Length(FAdapters));
-
   SetError(msOK, '');
   Result := True;
 end;
-
 // ---------------------------------------------------------------------------
 procedure TGPUMonitor.InitAdapter(var Ad: TAdapterEntry);
 var
@@ -514,7 +445,6 @@ begin
     Ad.SegmentCount := PULONG(@Buf[FOfs_Result])^;
     Ad.NodeCount := PULONG(@Buf[FOfs_Result + 4])^;
   end;
-
   hAd := AdOpen(Ad.Info.AdapterLuid);
   if hAd = 0 then Exit;
   try
@@ -523,15 +453,12 @@ begin
     QAI.hAdapter := hAd; QAI.InfoType := KMTQAITYPE_ADAPTERTYPE;
     QAI.pPrivateDriverData := @AT; QAI.PrivateDriverDataSize := SizeOf(AT);
     if FD3DKMTQueryAdapterInfo(QAI) = 0 then Ad.AdapterTypeValue := AT.Value;
-
     FillChar(SS, SizeOf(SS), 0);
     FillChar(QAI, SizeOf(QAI), 0);
     QAI.hAdapter := hAd; QAI.InfoType := KMTQAITYPE_GETSEGMENTSIZE;
     QAI.pPrivateDriverData := @SS; QAI.PrivateDriverDataSize := SizeOf(SS);
     if FD3DKMTQueryAdapterInfo(QAI) = 0 then Ad.SegmentSizes := SS;
-
     Ad.Description := ReadDescription(hAd);
-
     // Aperture flag per segment
     SetLength(Ad.ApertureBits, Ad.SegmentCount);
     for I := 0 to Integer(Ad.SegmentCount) - 1 do
@@ -543,13 +470,11 @@ begin
       else
         Ad.ApertureBits[I] := False;
     end;
-
     // Nodes
     QueryPerformanceCounter(NowQPC);
     SetLength(Ad.NodeTimings, Ad.NodeCount);
     SetLength(Ad.NodeEngineTypes, Ad.NodeCount);
     SetLength(Ad.NodeFriendlyNames, Ad.NodeCount);
-
     for I := 0 to Integer(Ad.NodeCount) - 1 do
     begin
       FillChar(NM, SizeOf(NM), 0);
@@ -567,10 +492,8 @@ begin
         Ad.NodeEngineTypes[I] := 0;
         Ad.NodeFriendlyNames[I] := Format('Node %d', [I]);
       end;
-
       Ad.NodeTimings[I].LastQPC := NowQPC;
       Ad.NodeTimings[I].LastRunningTime := 0;
-
       QS_Prepare(@Buf[0], 5, Ad.Info.AdapterLuid);
       PULONG(@Buf[FOfs_Input])^ := ULONG(I);
       if FD3DKMTQueryStatistics(@Buf[0]) = 0 then
@@ -580,7 +503,6 @@ begin
     AdClose(hAd);
   end;
 end;
-
 // ---------------------------------------------------------------------------
 function TGPUMonitor.ReadDescription(hAd: D3DKMT_HANDLE): string;
 var
@@ -602,7 +524,6 @@ begin
       if PWideChar(@Buf[544])^ <> #0 then
         Result := WideCharToString(PWideChar(@Buf[544]));
 end;
-
 // ---------------------------------------------------------------------------
 //  Constructor / Destructor
 // ---------------------------------------------------------------------------
@@ -615,7 +536,6 @@ begin
   FOfs_Result := 24;
   FOfs_Input := -1;
   QueryPerformanceFrequency(FQPCFreq);
-
   // Step 1: Check Windows version
   if not CheckWindowsVersion then
   begin
@@ -627,7 +547,6 @@ begin
       raise EGPUMonitorError.Create(FInitError);
     Exit;
   end;
-
   // Step 2: Load API
   if not LoadAPI then
   begin
@@ -635,7 +554,6 @@ begin
       raise EGPUMonitorError.Create(FInitError);
     Exit;
   end;
-
   // Step 3: Enumerate adapters and probe offsets
   if not DoEnumerate then
   begin
@@ -643,18 +561,15 @@ begin
       raise EGPUMonitorError.Create(FInitError);
     Exit;
   end;
-
   // Step 4: Initial baseline measurement
   Update;
 end;
-
 destructor TGPUMonitor.Destroy;
 begin
   if FGdi32 <> 0 then
     FreeLibrary(FGdi32);
   inherited;
 end;
-
 // ---------------------------------------------------------------------------
 //  Update
 // ---------------------------------------------------------------------------
@@ -803,7 +718,6 @@ begin
   if IsReady then
     Update;
 end;
-
 function TGPUMonitor.QueryGPU(Index: Integer): TGPUInfo;
 begin
   if not IsReady then
@@ -815,12 +729,10 @@ begin
   Update;
   Result := GetItem(Index);
 end;
-
 function TGPUMonitor.GetCount: Integer;
 begin
   Result := Length(FAdapters);
 end;
-
 function TGPUMonitor.GetItem(Idx: Integer): TGPUInfo;
 begin
   if (Idx >= 0) and (Idx < Length(FGPUs)) then
@@ -834,5 +746,4 @@ begin
       Result.LastError := Format('GPU index %d out of range (0..%d)', [Idx, High(FGPUs)]);
   end;
 end;
-
 end.

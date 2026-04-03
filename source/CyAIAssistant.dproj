@@ -131,6 +131,7 @@ $(PostBuildEvent)]]></PostBuildEvent>
         <DCCReference Include="CyAIAssistant.Settings.pas"/>
         <DCCReference Include="CyAIAssistant.AIClient.pas"/>
         <DCCReference Include="CyAIAssistant.IDETheme.pas"/>
+        <DCCReference Include="CyAIAssistant.DebugLog.pas"/>
         <DCCReference Include="CyAIAssistant.DiffViewer.pas"/>
         <DCCReference Include="CyAIAssistant.NewUnitDialog.pas"/>
         <DCCReference Include="CyAIAssistant.PromptDialog.pas"/>

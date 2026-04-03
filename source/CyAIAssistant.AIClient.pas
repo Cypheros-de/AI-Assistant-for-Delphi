@@ -19,7 +19,8 @@ uses
   System.JSON,
   System.Threading,
   System.SyncObjs,
-  CyAIAssistant.Settings;
+  CyAIAssistant.Settings,
+  CyAIAssistant.DebugLog;
 
 type
   TAIResultCallback = reference to procedure(const AResult: string; const AError: string);
@@ -36,6 +37,7 @@ type
     FCritSec: TCriticalSection;
     FActiveHTTP: THTTPClient; // nil when idle, set while a request is running
     FCancelled: Boolean;
+    FLogger: TDebugLogger;
 
     // Helpers to register / unregister the active HTTP client
     procedure SetActiveHTTP(AHTTP: THTTPClient);
@@ -119,11 +121,15 @@ constructor TAIClient.Create;
 begin
   inherited Create;
   FCritSec := TCriticalSection.Create;
+  // Create logger if debug mode is enabled
+  if GSettings.DebugEnabled and (GSettings.DebugLogFolder <> '') then
+    FLogger := TDebugLogger.Create(GSettings.DebugLogFolder);
 end;
 
 destructor TAIClient.Destroy;
 begin
   Cancel; // abort any running request
+  FreeAndNil(FLogger);
   FCritSec.Free;
   inherited;
 end;
@@ -220,19 +226,29 @@ const
 var
   Root: TJSONObject;
   Messages: TJSONArray;
-  Msg: TJSONObject;
+  MsgSystem: TJSONObject;
+  MsgUser: TJSONObject;
 begin
   Root := TJSONObject.Create;
   try
-    Root.AddPair('model', GSettings.ClaudeModel);
-    Root.AddPair('max_tokens', TJSONNumber.Create(GSettings.MaxTokens));
-    Root.AddPair('system', SYSTEM_PROMPT);
+    Root.AddPair('model', GSettings.ZaiModel);
+
     Messages := TJSONArray.Create;
-    Msg := TJSONObject.Create;
-    Msg.AddPair('role', 'user');
-    Msg.AddPair('content', APrompt);
-    Messages.Add(Msg);
+
+    MsgSystem := TJSONObject.Create;
+    MsgSystem.AddPair('role', 'system');
+    MsgSystem.AddPair('content', SYSTEM_PROMPT);
+
+    MsgUser := TJSONObject.Create;
+    MsgUser.AddPair('role', 'user');
+    MsgUser.AddPair('content', APrompt);
+
+    Messages.Add(MsgSystem);
+    Messages.Add(MsgUser);
+
     Root.AddPair('messages', Messages);
+    Root.AddPair('temperature', '1.0');
+    Root.AddPair('stream', 'false');
     Result := Root.ToJSON;
   finally
     Root.Free;
@@ -335,23 +351,33 @@ const
 var
   Root: TJSONObject;
   Messages: TJSONArray;
-  Msg: TJSONObject;
+  MsgSystem: TJSONObject;
+  MsgUser: TJSONObject;
   I: Integer;
 begin
   Root := TJSONObject.Create;
   try
-    Root.AddPair('model', GSettings.ClaudeModel);
-    Root.AddPair('max_tokens', TJSONNumber.Create(GSettings.MaxTokens));
-    Root.AddPair('system', SYSTEM_PROMPT);
+    Root.AddPair('model', GSettings.ZaiModel);
+
     Messages := TJSONArray.Create;
+
+    MsgSystem := TJSONObject.Create;
+    MsgSystem.AddPair('role', 'system');
+    MsgSystem.AddPair('content', SYSTEM_PROMPT);
+    Messages.Add(MsgSystem);
+
     for I := 0 to High(AHistory) do
     begin
-      Msg := TJSONObject.Create;
-      Msg.AddPair('role', RoleToStr(AHistory[I].Role));
-      Msg.AddPair('content', AHistory[I].Content);
-      Messages.Add(Msg);
+      MsgUser := TJSONObject.Create;
+      MsgUser.AddPair('role', RoleToStr(AHistory[I].Role));
+      MsgUser.AddPair('content', AHistory[I].Content);
+      Messages.Add(MsgUser);
     end;
+
     Root.AddPair('messages', Messages);
+    Root.AddPair('temperature', '1.0');
+    Root.AddPair('stream', 'false');
+
     Result := Root.ToJSON;
   finally
     Root.Free;
@@ -678,12 +704,25 @@ begin
     RequestBody := TStringStream.Create(BuildClaudeJSON(APrompt), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.ClaudeEndpoint, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
         ResultText := StripCodeFences(ExtractClaudeResponse(Response.ContentAsString(TEncoding.UTF8)));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -711,26 +750,43 @@ var
 begin
   HTTP := CreateHTTP(60000, 240000);
   try
-    Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
+    Headers := [TNameValuePair.Create('Content-Type', 'application/json'), TNameValuePair.Create('Accept-Language', 'en-US,en'), TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ZaiAPIKey)];
 
     RequestBody := TStringStream.Create(BuildZaiJSON(APrompt), TEncoding.UTF8);
     try
       try
-        Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.ZaiEndpoint, Headers, RequestBody.DataString);
+
+        Response := HTTP.Post(GSettings.ZaiEndpoint, RequestBody, nil, Headers);
         ResultText := ExtractZaiResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
-            ErrorText := E.Message;
+          begin
+            ErrorText := E.Message + #13#10 + Response.StatusText;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
+
     finally
       RequestBody.Free;
     end;
+
   finally
     DestroyHTTP(HTTP);
   end;
+
   if FCancelled then
     Exit;
+
   TThread.Synchronize(nil,
     procedure
     begin
@@ -753,12 +809,25 @@ begin
     RequestBody := TStringStream.Create(BuildOpenAIJSON(APrompt), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.OpenAIEndpoint, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GSettings.OpenAIEndpoint, RequestBody, nil, Headers);
         ResultText := StripCodeFences(ExtractOpenAIResponse(Response.ContentAsString(TEncoding.UTF8)));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -790,12 +859,25 @@ begin
     ResponseStream := TStringStream.Create('', TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.OllamaEndpoint, Headers, RequestBody.DataString);
+
         HTTP.Post(GSettings.OllamaEndpoint, RequestBody, ResponseStream, Headers);
         ResultText := StripCodeFences(ReadOllamaStream(ResponseStream.DataString));
+
+        // Log response (Ollama uses streaming, so headers may not be available in ResponseStream)
+        if Assigned(FLogger) then
+          FLogger.LogResponse(200, nil, ResponseStream.DataString);
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := 'Ollama error (is it running?): ' + E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -852,12 +934,25 @@ begin
     RequestBody := TStringStream.Create(JSON, TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', AEndpoint, Headers, JSON);
+
         Response := HTTP.Post(AEndpoint, RequestBody, nil, Headers);
         ResultText := StripCodeFences(ExtractOpenAIResponse(Response.ContentAsString(TEncoding.UTF8)));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -978,13 +1073,25 @@ begin
     ResponseStream := TStringStream.Create('', TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GenerateURL, Headers, RequestBody.DataString);
+
         HTTP.Post(GenerateURL, RequestBody, ResponseStream, Headers);
         ResultText := ReadOllamaGenerateStream(ResponseStream.DataString);
 
+        // Log response (Ollama uses streaming)
+        if Assigned(FLogger) then
+          FLogger.LogResponse(200, nil, ResponseStream.DataString);
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := 'Ollama completion error: ' + E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1171,12 +1278,25 @@ begin
     RequestBody := TStringStream.Create(BuildGeminiJSON(APrompt), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GeminiEndpointURL, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GeminiEndpointURL, RequestBody, nil, Headers);
         ResultText := StripCodeFences(ExtractGeminiResponse(Response.ContentAsString(TEncoding.UTF8)));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1207,12 +1327,25 @@ begin
     RequestBody := TStringStream.Create(BuildChatGeminiJSON(AHistory), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GeminiEndpointURL, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GeminiEndpointURL, RequestBody, nil, Headers);
         ResultText := ExtractGeminiResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1273,12 +1406,25 @@ begin
     RequestBody := TStringStream.Create(BuildChatClaudeJSON(AHistory), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.ClaudeEndpoint, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
         ResultText := ExtractClaudeResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message + #13#10 + Response.ContentAsString(TEncoding.UTF8);
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, Response.ContentAsString(TEncoding.UTF8), E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1306,17 +1452,31 @@ var
 begin
   HTTP := CreateHTTP(60000, 360000);
   try
-    Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
+    Headers := [TNameValuePair.Create('Content-Type', 'application/json'), TNameValuePair.Create('Accept-Language', 'en-US,en'), TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ZaiAPIKey)];
 
     RequestBody := TStringStream.Create(BuildChatZaiJSON(AHistory), TEncoding.UTF8);
     try
       try
-        Response := HTTP.Post(GSettings.ClaudeEndpoint, RequestBody, nil, Headers);
-        ResultText := ExtractZaiResponse(Response.ContentAsString(TEncoding.UTF8));
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.ZaiEndpoint, Headers, RequestBody.DataString);
+
+        Response := HTTP.Post(GSettings.ZaiEndpoint, RequestBody, nil, Headers);
+        if Response.ContentLength > 0 then
+          ResultText := ExtractZaiResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1348,12 +1508,25 @@ begin
     RequestBody := TStringStream.Create(BuildChatOpenAIJSON(AHistory, GSettings.OpenAIModel), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.OpenAIEndpoint, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(GSettings.OpenAIEndpoint, RequestBody, nil, Headers);
         ResultText := ExtractOpenAIResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1385,12 +1558,25 @@ begin
     ResponseStream := TStringStream.Create('', TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', GSettings.OllamaEndpoint, Headers, RequestBody.DataString);
+
         HTTP.Post(GSettings.OllamaEndpoint, RequestBody, ResponseStream, Headers);
         ResultText := ReadOllamaStream(ResponseStream.DataString);
+
+        // Log response (Ollama uses streaming)
+        if Assigned(FLogger) then
+          FLogger.LogResponse(200, nil, ResponseStream.DataString);
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := 'Ollama error (is it running?): ' + E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;
@@ -1423,12 +1609,25 @@ begin
     RequestBody := TStringStream.Create(BuildChatOpenAIJSON(AHistory, AModel), TEncoding.UTF8);
     try
       try
+        // Log request
+        if Assigned(FLogger) then
+          FLogger.LogRequest('POST', AEndpoint, Headers, RequestBody.DataString);
+
         Response := HTTP.Post(AEndpoint, RequestBody, nil, Headers);
         ResultText := ExtractOpenAIResponse(Response.ContentAsString(TEncoding.UTF8));
+
+        // Log response
+        if Assigned(FLogger) then
+          FLogger.LogResponse(Response.StatusCode, Response.Headers, Response.ContentAsString(TEncoding.UTF8));
       except
         on E: Exception do
           if not FCancelled then
+          begin
             ErrorText := E.Message;
+            // Log error response
+            if Assigned(FLogger) then
+              FLogger.LogResponse(0, nil, '', E.Message);
+          end;
       end;
     finally
       RequestBody.Free;

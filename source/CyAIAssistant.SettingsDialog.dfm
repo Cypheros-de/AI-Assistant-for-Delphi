@@ -2,7 +2,7 @@ object SettingsDialog: TSettingsDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Settings'
-  ClientHeight = 380
+  ClientHeight = 374
   ClientWidth = 700
   Color = clBtnFace
   Constraints.MinHeight = 400
@@ -16,7 +16,7 @@ object SettingsDialog: TSettingsDialog
   TextHeight = 15
   object PanelBottom: TPanel
     Left = 0
-    Top = 332
+    Top = 326
     Width = 700
     Height = 48
     Margins.Left = 5
@@ -26,7 +26,7 @@ object SettingsDialog: TSettingsDialog
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 311
+    ExplicitTop = 332
     DesignSize = (
       700
       48)
@@ -65,7 +65,7 @@ object SettingsDialog: TSettingsDialog
     Left = 0
     Top = 0
     Width = 700
-    Height = 332
+    Height = 326
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -74,7 +74,7 @@ object SettingsDialog: TSettingsDialog
     Align = alClient
     MultiLine = True
     TabOrder = 1
-    ExplicitHeight = 311
+    ExplicitHeight = 332
     object TabClaude: TTabSheet
       Margins.Left = 5
       Margins.Top = 5
@@ -933,6 +933,60 @@ object SettingsDialog: TSettingsDialog
           'Keyboard shortcut: Ctrl+Alt+A  (when a source code editor is act' +
           'ive)'#13#10'Access via: Tools > Cypheros AI Assistant > Code Assistant'
       end
+      object BevelDebug: TBevel
+        Left = 16
+        Top = 170
+        Width = 650
+        Height = 2
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Shape = bsTopLine
+      end
+      object LblDebug: TLabel
+        Left = 16
+        Top = 182
+        Width = 87
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Debug Logging:'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
+      object LblDebugLogFolder: TLabel
+        Left = 16
+        Top = 242
+        Width = 59
+        Height = 15
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Log Folder:'
+      end
+      object LblDebugInfo: TLabel
+        Left = 16
+        Top = 272
+        Width = 433
+        Height = 30
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 
+          'When enabled, all HTTP requests and responses (including headers' +
+          ') are logged to files in the specified folder. Authorization hea' +
+          'ders are redacted.'
+        WordWrap = True
+      end
       object ComboDefaultProvider: TComboBox
         Left = 200
         Top = 20
@@ -975,6 +1029,42 @@ object SettingsDialog: TSettingsDialog
         Margins.Bottom = 5
         TabOrder = 2
       end
+      object ChkDebugEnabled: TCheckBox
+        Left = 16
+        Top = 207
+        Width = 300
+        Height = 21
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Enable HTTP request logging'
+        TabOrder = 3
+      end
+      object EditDebugLogFolder: TEdit
+        Left = 200
+        Top = 239
+        Width = 360
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        TabOrder = 4
+      end
+      object BtnBrowseLogFolder: TButton
+        Left = 570
+        Top = 239
+        Width = 70
+        Height = 23
+        Margins.Left = 5
+        Margins.Top = 5
+        Margins.Right = 5
+        Margins.Bottom = 5
+        Caption = 'Browse...'
+        TabOrder = 5
+        OnClick = BtnBrowseLogFolderClick
+      end
     end
     object TabCustomPrompts: TTabSheet
       Margins.Left = 5
@@ -986,7 +1076,7 @@ object SettingsDialog: TSettingsDialog
         Left = 0
         Top = 0
         Width = 220
-        Height = 282
+        Height = 276
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -994,7 +1084,7 @@ object SettingsDialog: TSettingsDialog
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitHeight = 261
+        ExplicitHeight = 332
         object LblPromptTemplates: TLabel
           Left = 0
           Top = 0
@@ -1019,7 +1109,7 @@ object SettingsDialog: TSettingsDialog
           Left = 0
           Top = 15
           Width = 220
-          Height = 231
+          Height = 225
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -1028,11 +1118,11 @@ object SettingsDialog: TSettingsDialog
           ItemHeight = 15
           TabOrder = 0
           OnClick = ListCustomPromptsClick
-          ExplicitHeight = 210
+          ExplicitHeight = 281
         end
         object PanelListBtns: TPanel
           Left = 0
-          Top = 246
+          Top = 240
           Width = 220
           Height = 36
           Margins.Left = 5
@@ -1042,7 +1132,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitTop = 225
+          ExplicitTop = 296
           object BtnMoveUp: TButton
             Left = 2
             Top = 4
@@ -1088,7 +1178,7 @@ object SettingsDialog: TSettingsDialog
         Left = 220
         Top = 0
         Width = 472
-        Height = 282
+        Height = 276
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -1096,7 +1186,7 @@ object SettingsDialog: TSettingsDialog
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitHeight = 261
+        ExplicitHeight = 332
         object PanelPromptTop: TPanel
           Left = 0
           Top = 0
@@ -1151,7 +1241,7 @@ object SettingsDialog: TSettingsDialog
         end
         object PanelPromptBtns: TPanel
           Left = 0
-          Top = 242
+          Top = 236
           Width = 472
           Height = 40
           Margins.Left = 5
@@ -1161,7 +1251,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitTop = 221
+          ExplicitTop = 292
           object BtnAddPrompt: TButton
             Left = 4
             Top = 5
@@ -1206,7 +1296,7 @@ object SettingsDialog: TSettingsDialog
           Left = 0
           Top = 62
           Width = 472
-          Height = 180
+          Height = 174
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -1220,7 +1310,7 @@ object SettingsDialog: TSettingsDialog
           ParentFont = False
           ScrollBars = ssVertical
           TabOrder = 2
-          ExplicitHeight = 159
+          ExplicitHeight = 230
         end
       end
     end

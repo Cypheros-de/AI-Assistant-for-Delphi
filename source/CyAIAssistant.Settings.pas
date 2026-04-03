@@ -22,7 +22,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Generics.Collections,
-  System.Win.Registry,
+  System.Win.Registry, System.IOUtils,
   Winapi.Windows;
 
 const
@@ -69,6 +69,8 @@ type
     FZaiAPIKey: string;
     FZaiModel: string;
     FZaiEndpoint: string;
+    FDebugEnabled: Boolean;
+    FDebugLogFolder: string;
     procedure SeedDefaultPrompts;
     procedure LoadPrompts;
     procedure SavePrompts;
@@ -110,6 +112,8 @@ type
     property LastPromptIndex: Integer read FLastPromptIndex write FLastPromptIndex;
     property OllamaCompletionModel: string read FOllamaCompletionModel write FOllamaCompletionModel;
     property CodeCompletionEnabled: Boolean read FCodeCompletionEnabled write FCodeCompletionEnabled;
+    property DebugEnabled: Boolean read FDebugEnabled write FDebugEnabled;
+    property DebugLogFolder: string read FDebugLogFolder write FDebugLogFolder;
 
     // Unified prompt list - all templates in display order
     property Prompts: TList<TPromptTemplate> read FPrompts;
@@ -200,6 +204,8 @@ begin
   FLastPromptIndex := 0;
   FOllamaCompletionModel := 'codellama';
   FCodeCompletionEnabled := False;
+  FDebugEnabled := False;
+  FDebugLogFolder := TPath.Combine(TPath.GetHomePath, 'CyAIAssistant\Logs');
   Load;
 end;
 
@@ -405,6 +411,10 @@ begin
           FOllamaCompletionModel := Reg.ReadString('OllamaCompletionModel');
         if Reg.ValueExists('CodeCompletionEnabled') then
           FCodeCompletionEnabled := Reg.ReadBool('CodeCompletionEnabled');
+        if Reg.ValueExists('DebugEnabled') then
+          FDebugEnabled := Reg.ReadBool('DebugEnabled');
+        if Reg.ValueExists('DebugLogFolder') then
+          FDebugLogFolder := Reg.ReadString('DebugLogFolder');
       finally
         Reg.CloseKey;
       end;
@@ -452,6 +462,8 @@ begin
         Reg.WriteInteger('LastPromptIndex', FLastPromptIndex);
         Reg.WriteString('OllamaCompletionModel', FOllamaCompletionModel);
         Reg.WriteBool('CodeCompletionEnabled', FCodeCompletionEnabled);
+        Reg.WriteBool('DebugEnabled', FDebugEnabled);
+        Reg.WriteString('DebugLogFolder', FDebugLogFolder);
       finally
         Reg.CloseKey;
       end;

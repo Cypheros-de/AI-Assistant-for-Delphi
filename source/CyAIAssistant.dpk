@@ -38,6 +38,7 @@ contains
   CyAIAssistant.Settings in 'CyAIAssistant.Settings.pas',
   CyAIAssistant.AIClient in 'CyAIAssistant.AIClient.pas',
   CyAIAssistant.IDETheme in 'CyAIAssistant.IDETheme.pas',
+  CyAIAssistant.DebugLog in 'CyAIAssistant.DebugLog.pas',
   CyAIAssistant.DiffViewer in 'CyAIAssistant.DiffViewer.pas',
   CyAIAssistant.NewUnitDialog in 'CyAIAssistant.NewUnitDialog.pas',
   CyAIAssistant.PromptDialog in 'CyAIAssistant.PromptDialog.pas',
