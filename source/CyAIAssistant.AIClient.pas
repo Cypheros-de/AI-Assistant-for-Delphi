@@ -709,7 +709,7 @@ var
   ResultText: string;
   ErrorText: string;
 begin
-  HTTP := CreateHTTP(30000, 120000);
+  HTTP := CreateHTTP(60000, 240000);
   try
     Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
 
@@ -1304,7 +1304,7 @@ var
   ResultText: string;
   ErrorText: string;
 begin
-  HTTP := CreateHTTP(30000, 180000);
+  HTTP := CreateHTTP(60000, 360000);
   try
     Headers := [TNameValuePair.Create('Authorization', 'Bearer ' + GSettings.ClaudeAPIKey), TNameValuePair.Create('Content-Type', 'application/json')];
 
