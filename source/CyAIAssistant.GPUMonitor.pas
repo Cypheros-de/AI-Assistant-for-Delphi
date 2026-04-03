@@ -669,89 +669,122 @@ var
   hAd: D3DKMT_HANDLE;
   PD: D3DKMT_ADAPTER_PERFDATA;
   QAI: D3DKMT_QUERYADAPTERINFO;
+  AdapterLuid: _LUID;
+  NodeCount, SegmentCount: Integer;
 const
-  HNS = Int64(10000000);
+  HNS_PER_SEC = Int64(10000000);
+  PERCENT_MULTIPLIER = 100.0;
+  TEMP_DIVISOR = 10;
+  CLOCK_DIVISOR = 1000000;
+  POWER_DIVISOR = 1000;
 begin
   if not IsReady then Exit;
   QueryPerformanceCounter(NowQPC);
 
   for I := 0 to High(FAdapters) do
   begin
+    AdapterLuid := FAdapters[I].Info.AdapterLuid;
+    NodeCount := Integer(FAdapters[I].NodeCount);
+    SegmentCount := Integer(FAdapters[I].SegmentCount);
+
+    // Initialize GPU Info
     FGPUs[I] := Default(TGPUInfo);
     FGPUs[I].AdapterIndex := I;
-    FGPUs[I].AdapterLuid := FAdapters[I].Info.AdapterLuid;
+    FGPUs[I].AdapterLuid := AdapterLuid;
     FGPUs[I].Description := FAdapters[I].Description;
     FGPUs[I].IsRenderSupported := (FAdapters[I].AdapterTypeValue and 1) <> 0;
     FGPUs[I].IsDisplaySupported := (FAdapters[I].AdapterTypeValue and 2) <> 0;
     FGPUs[I].IsSoftwareDevice := (FAdapters[I].AdapterTypeValue and 4) <> 0;
 
-    // ---- Usage ----
+    // ---- Usage Calculation ----
     MaxUsage := 0;
-    SetLength(FGPUs[I].Engines, FAdapters[I].NodeCount);
-    for J := 0 to Integer(FAdapters[I].NodeCount) - 1 do
+    SetLength(FGPUs[I].Engines, NodeCount);
+
+    for J := 0 to NodeCount - 1 do
     begin
       FGPUs[I].Engines[J].NodeIndex := J;
       FGPUs[I].Engines[J].EngineType := FAdapters[I].NodeEngineTypes[J];
       FGPUs[I].Engines[J].EngineTypeName := EngineTypeName(FAdapters[I].NodeEngineTypes[J]);
       FGPUs[I].Engines[J].FriendlyName := FAdapters[I].NodeFriendlyNames[J];
 
-      QS_Prepare(@Buf[0], 5, FAdapters[I].Info.AdapterLuid);
+      QS_Prepare(@Buf[0], 5, AdapterLuid);
       PULONG(@Buf[FOfs_Input])^ := ULONG(J);
+
       if FD3DKMTQueryStatistics(@Buf[0]) = 0 then
       begin
         RunTime := PInt64(@Buf[FOfs_Result])^;
         QPCDiff := NowQPC - FAdapters[I].NodeTimings[J].LastQPC;
+
         if QPCDiff > 0 then
         begin
           DeltaGPU := RunTime - FAdapters[I].NodeTimings[J].LastRunningTime;
-          ElapsedHNS := (QPCDiff * HNS) div FQPCFreq;
+          ElapsedHNS := (QPCDiff * HNS_PER_SEC) div FQPCFreq;
+
           if ElapsedHNS > 0 then
           begin
-            NodeUsage := Max(0.0, Min(100.0, (DeltaGPU / ElapsedHNS) * 100.0));
+            NodeUsage := (DeltaGPU / ElapsedHNS) * PERCENT_MULTIPLIER;
+            NodeUsage := Max(0.0, Min(100.0, NodeUsage));
+
             FGPUs[I].Engines[J].UsagePercent := NodeUsage;
-            if NodeUsage > MaxUsage then MaxUsage := NodeUsage;
+            if NodeUsage > MaxUsage then
+              MaxUsage := NodeUsage;
           end;
         end;
+
         FAdapters[I].NodeTimings[J].LastRunningTime := RunTime;
         FAdapters[I].NodeTimings[J].LastQPC := NowQPC;
       end;
     end;
     FGPUs[I].UsagePercent := MaxUsage;
 
-    // ---- Memory ----
-    DedUsed := 0; ShrUsed := 0;
-    for J := 0 to Integer(FAdapters[I].SegmentCount) - 1 do
+    // ---- Memory Calculation ----
+    DedUsed := 0;
+    ShrUsed := 0;
+
+    for J := 0 to SegmentCount - 1 do
     begin
-      QS_Prepare(@Buf[0], 3, FAdapters[I].Info.AdapterLuid);
+      QS_Prepare(@Buf[0], 3, AdapterLuid);
       PULONG(@Buf[FOfs_Input])^ := ULONG(J);
+
       if FD3DKMTQueryStatistics(@Buf[0]) = 0 then
       begin
         BytesC := PUInt64(@Buf[FOfs_Result + 8])^;
+
         if (J < Length(FAdapters[I].ApertureBits)) and FAdapters[I].ApertureBits[J] then
           Inc(ShrUsed, BytesC)
         else
           Inc(DedUsed, BytesC);
       end;
     end;
+
     FGPUs[I].DedicatedTotalMB := ToMB(FAdapters[I].SegmentSizes.DedicatedVideoMemorySize);
     FGPUs[I].DedicatedUsedMB := ToMB(DedUsed);
     FGPUs[I].SharedTotalMB := ToMB(FAdapters[I].SegmentSizes.SharedSystemMemorySize);
     FGPUs[I].SharedUsedMB := ToMB(ShrUsed);
 
-    // ---- Performance data ----
-    hAd := AdOpen(FAdapters[I].Info.AdapterLuid);
+    // ---- Performance Data ----
+    hAd := AdOpen(AdapterLuid);
     if hAd <> 0 then
     begin
       try
-        FillChar(PD, SizeOf(PD), 0); FillChar(QAI, SizeOf(QAI), 0);
-        QAI.hAdapter := hAd; QAI.InfoType := KMTQAITYPE_ADAPTERPERFDATA;
-        QAI.pPrivateDriverData := @PD; QAI.PrivateDriverDataSize := SizeOf(PD);
+        FillChar(PD, SizeOf(PD), 0);
+        FillChar(QAI, SizeOf(QAI), 0);
+
+        QAI.hAdapter := hAd;
+        QAI.InfoType := KMTQAITYPE_ADAPTERPERFDATA;
+        QAI.pPrivateDriverData := @PD;
+        QAI.PrivateDriverDataSize := SizeOf(PD);
+
         if FD3DKMTQueryAdapterInfo(QAI) = 0 then
         begin
-          if PD.Temperature > 0 then FGPUs[I].TemperatureC := PD.Temperature div 10;
-          FGPUs[I].MemoryClockMHz := PD.MemoryFrequency div 1000000;
+          if PD.Temperature > 0 then
+            FGPUs[I].TemperatureC := PD.Temperature div TEMP_DIVISOR;
+
+          FGPUs[I].MemoryClockMHz := PD.MemoryFrequency div CLOCK_DIVISOR;
           FGPUs[I].FanRPM := PD.FanRPM;
-          if PD.Power > 0 then FGPUs[I].PowerWatt := PD.Power div 1000;
+
+          if PD.Power > 0 then
+            FGPUs[I].PowerWatt := PD.Power div POWER_DIVISOR;
         end;
       finally
         AdClose(hAd);
