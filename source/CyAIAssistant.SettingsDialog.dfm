@@ -805,7 +805,7 @@ object SettingsDialog: TSettingsDialog
         Left = 18
         Top = 134
         Width = 450
-        Height = 30
+        Height = 75
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -813,7 +813,9 @@ object SettingsDialog: TSettingsDialog
         Caption = 
           'Get your API key at: https://z.ai/manage-apikey/apikey-list'#13#10'The' +
           ' key is stored in the Windows registry under HKCU\Software\CyAIA' +
-          'ssistant\Delphi'
+          'ssistant\Delphi'#13#10#13#10'Coding plan user end point: https://api.z.ai/' +
+          'api/coding/paas/v4'#13#10'Pay-as-you-go user end point: https://api.z.' +
+          'ai/api/paas/v4/chat/completions'
       end
       object Bevel1: TBevel
         Left = 12
@@ -988,11 +990,10 @@ object SettingsDialog: TSettingsDialog
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
-        ExplicitHeight = 281
         object LblPromptTemplates: TLabel
           Left = 0
           Top = 0
-          Width = 220
+          Width = 108
           Height = 15
           Margins.Left = 5
           Margins.Top = 5
@@ -1007,7 +1008,6 @@ object SettingsDialog: TSettingsDialog
           Font.Style = [fsBold]
           ParentFont = False
           Layout = tlCenter
-          ExplicitWidth = 108
         end
         object ListCustomPrompts: TListBox
           Left = 0
@@ -1022,7 +1022,6 @@ object SettingsDialog: TSettingsDialog
           ItemHeight = 15
           TabOrder = 0
           OnClick = ListCustomPromptsClick
-          ExplicitHeight = 230
         end
         object PanelListBtns: TPanel
           Left = 0
@@ -1036,7 +1035,6 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitTop = 245
           object BtnMoveUp: TButton
             Left = 2
             Top = 4
@@ -1090,7 +1088,6 @@ object SettingsDialog: TSettingsDialog
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitHeight = 281
         object PanelPromptTop: TPanel
           Left = 0
           Top = 0
@@ -1155,7 +1152,6 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
-          ExplicitTop = 241
           object BtnAddPrompt: TButton
             Left = 4
             Top = 5
@@ -1214,7 +1210,6 @@ object SettingsDialog: TSettingsDialog
           ParentFont = False
           ScrollBars = ssVertical
           TabOrder = 2
-          ExplicitHeight = 179
         end
       end
     end

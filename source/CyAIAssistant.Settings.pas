@@ -184,7 +184,7 @@ begin
   FClaudeModel := 'claude-opus-4-5';
   FClaudeEndpoint := 'https://api.anthropic.com/v1/messages';
   FZaiModel := 'glm-4.7';
-  FZaiEndpoint := 'https://api.z.ai/api/coding/paas/v4/chat/completions';
+  FZaiEndpoint := 'https://api.z.ai/api/coding/paas/v4';
   FOpenAIModel := 'gpt-4o';
   FOpenAIEndpoint := 'https://api.openai.com/v1/chat/completions';
   FOllamaEndpoint := 'http://localhost:11434/api/chat';
