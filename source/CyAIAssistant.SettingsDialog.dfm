@@ -2,9 +2,11 @@ object SettingsDialog: TSettingsDialog
   Left = 0
   Top = 0
   Caption = 'Cypheros AI Assistant - Settings'
-  ClientHeight = 359
+  ClientHeight = 380
   ClientWidth = 700
   Color = clBtnFace
+  Constraints.MinHeight = 400
+  Constraints.MinWidth = 600
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -14,7 +16,7 @@ object SettingsDialog: TSettingsDialog
   TextHeight = 15
   object PanelBottom: TPanel
     Left = 0
-    Top = 311
+    Top = 332
     Width = 700
     Height = 48
     Margins.Left = 5
@@ -24,6 +26,7 @@ object SettingsDialog: TSettingsDialog
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 311
     DesignSize = (
       700
       48)
@@ -62,7 +65,7 @@ object SettingsDialog: TSettingsDialog
     Left = 0
     Top = 0
     Width = 700
-    Height = 311
+    Height = 332
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -71,6 +74,7 @@ object SettingsDialog: TSettingsDialog
     Align = alClient
     MultiLine = True
     TabOrder = 1
+    ExplicitHeight = 311
     object TabClaude: TTabSheet
       Margins.Left = 5
       Margins.Top = 5
@@ -982,7 +986,7 @@ object SettingsDialog: TSettingsDialog
         Left = 0
         Top = 0
         Width = 220
-        Height = 261
+        Height = 282
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -990,10 +994,11 @@ object SettingsDialog: TSettingsDialog
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 0
+        ExplicitHeight = 261
         object LblPromptTemplates: TLabel
           Left = 0
           Top = 0
-          Width = 108
+          Width = 220
           Height = 15
           Margins.Left = 5
           Margins.Top = 5
@@ -1008,12 +1013,13 @@ object SettingsDialog: TSettingsDialog
           Font.Style = [fsBold]
           ParentFont = False
           Layout = tlCenter
+          ExplicitWidth = 108
         end
         object ListCustomPrompts: TListBox
           Left = 0
           Top = 15
           Width = 220
-          Height = 210
+          Height = 231
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -1022,10 +1028,11 @@ object SettingsDialog: TSettingsDialog
           ItemHeight = 15
           TabOrder = 0
           OnClick = ListCustomPromptsClick
+          ExplicitHeight = 210
         end
         object PanelListBtns: TPanel
           Left = 0
-          Top = 225
+          Top = 246
           Width = 220
           Height = 36
           Margins.Left = 5
@@ -1035,6 +1042,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
+          ExplicitTop = 225
           object BtnMoveUp: TButton
             Left = 2
             Top = 4
@@ -1080,7 +1088,7 @@ object SettingsDialog: TSettingsDialog
         Left = 220
         Top = 0
         Width = 472
-        Height = 261
+        Height = 282
         Margins.Left = 5
         Margins.Top = 5
         Margins.Right = 5
@@ -1088,6 +1096,7 @@ object SettingsDialog: TSettingsDialog
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitHeight = 261
         object PanelPromptTop: TPanel
           Left = 0
           Top = 0
@@ -1142,7 +1151,7 @@ object SettingsDialog: TSettingsDialog
         end
         object PanelPromptBtns: TPanel
           Left = 0
-          Top = 221
+          Top = 242
           Width = 472
           Height = 40
           Margins.Left = 5
@@ -1152,6 +1161,7 @@ object SettingsDialog: TSettingsDialog
           Align = alBottom
           BevelOuter = bvNone
           TabOrder = 1
+          ExplicitTop = 221
           object BtnAddPrompt: TButton
             Left = 4
             Top = 5
@@ -1196,7 +1206,7 @@ object SettingsDialog: TSettingsDialog
           Left = 0
           Top = 62
           Width = 472
-          Height = 159
+          Height = 180
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -1210,6 +1220,7 @@ object SettingsDialog: TSettingsDialog
           ParentFont = False
           ScrollBars = ssVertical
           TabOrder = 2
+          ExplicitHeight = 159
         end
       end
     end
