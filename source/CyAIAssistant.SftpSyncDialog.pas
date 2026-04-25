@@ -178,6 +178,7 @@ begin
 
   GSftpSync.OnLog := OnSyncLog;
   GSftpSync.OnNotifyFile := NotifyIDEIfOpen;
+  GSftpSync.OnStop := procedure begin UpdateStatusUI; end;
   UpdateStatusUI;
   ApplyIDETheme(Self);
 end;
@@ -189,6 +190,7 @@ begin
   if Assigned(GSftpSync) then
   begin
     GSftpSync.OnLog := nil;
+    GSftpSync.OnStop := nil;
     GSftpSync.OnNotifyFile := nil;
   end;
   inherited;
@@ -876,6 +878,7 @@ begin
   if Assigned(GSftpSync) then
   begin
     GSftpSync.OnLog := nil;
+    GSftpSync.OnStop := nil;
     GSftpSync.OnNotifyFile := nil;
   end;
   Action := caFree; // free the form instance on close

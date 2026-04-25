@@ -101,6 +101,7 @@ type
 
     // -- Log / notifications ------------------------------------------------
     FOnLog: TSftpLogEvent;
+    FOnStop: TProc;
     FOnNotifyFile: TSftpNotifyFileEvent;
     FLogBuffer: TStringList;
     // Per-file cache of the last timestamp seen on BOTH sides after a sync.
@@ -118,7 +119,7 @@ type
     function NextBackupZipPath: string;
     procedure OnSyncTimer(Sender: TObject);
     procedure DoSyncCycle;
-    function ConnectSftp(out Session: ISshSession; out Sftp: ISftpClient): Boolean;
+    function ConnectSftp(out Session: ISshSession; out Sftp: ISftpClient; out AFatal: Boolean): Boolean;
     procedure CollectLocalFiles(AList: TList<TSyncFileInfo>);
     procedure CollectRemoteFiles(Sftp: ISftpClient; const ARemoteDir: string; AList: TList<TSyncFileInfo>; ARecurse: Boolean);
     procedure SyncLists(Sftp: ISftpClient; Local, Remote: TList<TSyncFileInfo>);
@@ -147,6 +148,8 @@ type
 
     property LogBuffer: TStringList read FLogBuffer;
     property OnLog: TSftpLogEvent read FOnLog write FOnLog;
+    // Called on the main thread whenever the engine stops (button or error).
+    property OnStop: TProc read FOnStop write FOnStop;
     // Called on the main thread after each file is downloaded.
     // Assign in the host to notify the IDE (or any other UI) that a file changed.
     property OnNotifyFile: TSftpNotifyFileEvent read FOnNotifyFile write FOnNotifyFile;
@@ -377,10 +380,22 @@ begin
 end;
 
 procedure TSftpSyncEngine.Stop;
+var
+  Callback: TProc;
 begin
   FSyncTimer.Enabled := False;
   StopWatchThread;
   Log('Sync stopped.');
+  if Assigned(FOnStop) then
+  begin
+    Callback := FOnStop;
+    TMainThreadRunner.Queue(
+      procedure
+      begin
+        if Assigned(Callback) then
+          Callback;
+      end);
+  end;
 end;
 
 // ---------------------------------------------------------------------------
@@ -420,12 +435,26 @@ begin
             Self_.Log('Push All: no local files found in: ' + Self_.FLocalBasePath);
             Exit;
           end;
-          if not Self_.ConnectSftp(Session, Sftp) then
+          var Dummy: Boolean;
+          if not Self_.ConnectSftp(Session, Sftp, Dummy) then
             Exit;
-          if not Sftp.DirectoryExists(Self_.FRemoteBasePath) then
+          if Self_.FRemoteBasePath = '' then
           begin
-            Self_.EnsureRemoteDir(Self_.FRemoteBasePath, Sftp);
-            Self_.Log('Created remote directory: ' + Self_.FRemoteBasePath);
+            Self_.Log('Push All aborted: remote base path is not configured.');
+            Exit;
+          end;
+          try
+            if not Sftp.DirectoryExists(Self_.FRemoteBasePath) then
+            begin
+              Self_.EnsureRemoteDir(Self_.FRemoteBasePath, Sftp);
+              Self_.Log('Created remote directory: ' + Self_.FRemoteBasePath);
+            end;
+          except
+            on E: Exception do
+            begin
+              Self_.Log('Push All aborted: ' + E.Message);
+              Exit;
+            end;
           end;
           Pushed := 0;
           for LInfo in LocalList do
@@ -507,7 +536,8 @@ begin
       BackedUp := 0;
       try
         try
-          if not Self_.ConnectSftp(Session, Sftp) then
+          var Dummy: Boolean;
+          if not Self_.ConnectSftp(Session, Sftp, Dummy) then
             Exit;
           Self_.CollectRemoteFiles(Sftp, Self_.FRemoteBasePath, RemoteList, Self_.FIncludeSubDirs);
           if RemoteList.Count = 0 then
@@ -614,36 +644,50 @@ end;
 // SFTP connection helper
 // ---------------------------------------------------------------------------
 
-function TSftpSyncEngine.ConnectSftp(out Session: ISshSession; out Sftp: ISftpClient): Boolean;
+function TSftpSyncEngine.ConnectSftp(out Session: ISshSession; out Sftp: ISftpClient; out AFatal: Boolean): Boolean;
 var
   Attempts: Integer;
 begin
   Result := False;
+  AFatal := False;
   Session := nil;
   Sftp := nil;
   try
-    Session := CreateSession(FHost, FPort);
-    Session.ConfigKnownHostCheckPolicy(False, DefKnownHostCheckPolicy);
-    Session.Connect;
+    // Network-level connection — failures here are transient (host unreachable,
+    // SSH handshake noise, etc.).  Do NOT set AFatal.
+    try
+      Session := CreateSession(FHost, FPort);
+      Session.ConfigKnownHostCheckPolicy(False, DefKnownHostCheckPolicy);
+      Session.Connect;
+    except
+      on E: Exception do
+        raise ESshError.CreateFmt('Cannot reach %s:%d — host unreachable or offline (%s)',
+          [FHost, FPort, E.Message]);
+    end;
     Session.SetTimeout(60000);
 
     if Session.SessionState <> session_Connected then
-      raise ESshError.Create('SSH not connected');
+      raise ESshError.CreateFmt('Cannot reach %s:%d — connection failed (no SSH response)',
+        [FHost, FPort]);
 
+    // Authentication — a failure here means wrong credentials: fatal.
+    AFatal := True;
     if FPrivateKeyPath <> '' then
     begin
       if not Session.UserAuthKey(FUserName, FPublicKeyPath, FPrivateKeyPath) then
-        raise ESshError.Create('Key auth failed');
+        raise ESshError.Create('Authentication failed: key rejected — check private/public key paths');
     end
     else
     begin
       if not Session.UserAuthPass(FUserName, FPassword) then
-        raise ESshError.Create('Password auth failed');
+        raise ESshError.Create('Authentication failed: wrong username or password');
     end;
 
     if Session.SessionState <> session_Authorized then
-      raise ESshError.Create('SSH not authorized');
+      raise ESshError.Create('Authentication failed: SSH not authorized');
 
+    // SFTP subsystem — can be transiently unavailable under load.
+    AFatal := False;
     Attempts := 0;
     repeat
       try
@@ -659,7 +703,7 @@ begin
     until Attempts >= 3;
 
     if not Assigned(Sftp) then
-      raise ESshError.Create('SFTP subsystem unavailable after 3 attempts');
+      raise ESshError.Create('SFTP subsystem unavailable — check that the SSH server allows SFTP');
 
     Result := True;
   except
@@ -730,6 +774,11 @@ begin
       Rel := TPath.GetFileName(F);
     Rel := StringReplace(Rel, '\', '/', [rfReplaceAll]);
 
+    // Skip internal folders that must never be synced
+    if StartsText('__recovery/', Rel) or StartsText('__backup/', Rel) or
+       (Pos('/__recovery/', Rel) > 0) or (Pos('/__backup/', Rel) > 0) then
+      Continue;
+
     Info.RelPath := Rel;
     Info.Size := GetFileSize(F);
     try
@@ -767,12 +816,20 @@ begin
   try
     Items := Sftp.DirContent(ARemoteDir);
   except
-    Exit;
+    on E: Exception do
+    begin
+      Log('Cannot list remote directory "' + ARemoteDir + '": ' + E.Message);
+      Exit;
+    end;
   end;
 
   for Item in Items do
   begin
     if (Item.FileName = '.') or (Item.FileName = '..') then
+      Continue;
+
+    // Skip internal folders that must never be synced
+    if (Item.FileName = '__recovery') or (Item.FileName = '__backup') then
       Continue;
 
     Sub := ARemoteDir + '/' + Item.FileName;
@@ -827,18 +884,20 @@ var
   Segments: TArray<string>;
   Current: string;
   I: Integer;
+  CreateErr: string;
 begin
   if ARemoteDir = '' then
-    Exit;
+    raise Exception.Create('Remote directory path is empty');
   if Sftp.DirectoryExists(ARemoteDir) then
     Exit;
 
   // Split path on '/' and rebuild incrementally
   Segments := ARemoteDir.TrimLeft(['/']).Split(['/'], TStringSplitOptions.ExcludeEmpty);
   if Length(Segments) = 0 then
-    Exit;
+    raise Exception.Create('Invalid remote directory path: "' + ARemoteDir + '"');
 
   Current := '';
+  CreateErr := '';
   for I := 0 to High(Segments) do
   begin
     if ARemoteDir.StartsWith('/') then
@@ -851,11 +910,27 @@ begin
       try
         Sftp.CreateDir(Current, FDirPermissions);
       except
-        // CreateDir failed -- fall back to ForceDirectories for the full path.
-        Sftp.ForceDirectories(ARemoteDir);
-        Exit;
+        on E: Exception do
+        begin
+          CreateErr := E.Message;
+          // Fall back to ForceDirectories for the full path.
+          try
+            Sftp.ForceDirectories(ARemoteDir);
+          except
+          end;
+          Break;
+        end;
       end;
     end;
+  end;
+
+  // Verify the target directory actually exists now
+  if not Sftp.DirectoryExists(ARemoteDir) then
+  begin
+    if CreateErr <> '' then
+      raise Exception.Create('Cannot create remote directory "' + ARemoteDir + '": ' + CreateErr)
+    else
+      raise Exception.Create('Remote directory "' + ARemoteDir + '" does not exist and could not be created — check path and server permissions');
   end;
 end;
 
@@ -1255,11 +1330,12 @@ begin
       Sftp: ISftpClient;
       LocalList: TList<TSyncFileInfo>;
       RemoteList: TList<TSyncFileInfo>;
-      // Check if an immediate sync was also requested during this cycle
       WasImmediate: Boolean;
+      StopSync: Boolean;
     begin
       Session := nil;
       Sftp := nil;
+      StopSync := False;
       LocalList := TList<TSyncFileInfo>.Create;
       RemoteList := TList<TSyncFileInfo>.Create;
       try
@@ -1274,14 +1350,37 @@ begin
           end;
 
           // -- 2. Connect ---------------------------------------------------
-          if not Self_.ConnectSftp(Session, Sftp) then
+          var Fatal: Boolean;
+          if not Self_.ConnectSftp(Session, Sftp, Fatal) then
+          begin
+            if Fatal then
+            begin
+              Self_.Log('Sync stopped — fix the settings and start again.');
+              StopSync := True;
+            end;
             Exit;
+          end;
 
           // -- 3. Ensure remote base directory exists -----------------------
-          if not Sftp.DirectoryExists(RemoteBase) then
+          if RemoteBase = '' then
           begin
-            Self_.EnsureRemoteDir(RemoteBase, Sftp);
-            Self_.Log('Created remote directory: ' + RemoteBase);
+            Self_.Log('Sync stopped: remote base path is not configured.');
+            StopSync := True;
+            Exit;
+          end;
+          try
+            if not Sftp.DirectoryExists(RemoteBase) then
+            begin
+              Self_.EnsureRemoteDir(RemoteBase, Sftp);
+              Self_.Log('Created remote directory: ' + RemoteBase);
+            end;
+          except
+            on E: Exception do
+            begin
+              Self_.Log('Sync stopped: ' + E.Message);
+              StopSync := True;
+              Exit;
+            end;
           end;
 
           // -- 4. Collect remote files ---------------------------------------
@@ -1326,6 +1425,8 @@ begin
           procedure
           begin
             Self_.FSyncBusy := False;
+            if StopSync then
+              Self_.Stop;
           end);
       end;
     end));
